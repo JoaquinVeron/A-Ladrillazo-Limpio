@@ -274,8 +274,11 @@ this.scene.time.delayedCall(3000, () => {
   this.arenaCount = 0;
   this.gravaCount = 0;
   this.setTint(0xffffff);
+  if (this.Cemento) {
+    this.Cemento.destroy(); // Destruir el cemento viejo si existe
+  }
   // Crear el cemento y guardar la referencia
-  const Cemento = new Material(this.scene, this.x + 150, this.y, "Cemento");
+  const Cemento = new Material(this.scene, this.x + 150, this.y, "Cemento").setScale(0.75);
   this.scene.Cemento = Cemento;
   // Agregar overlap dinámicamente
   this.scene.physics.add.overlap(this.scene.Celeste, Cemento, () => {
