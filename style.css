@@ -8,5 +8,5 @@ html, body {
 
 canvas {
     display: block;
-    background-color: transparent; /* 🔹 para que se vea el color de Phaser */
+    background-color: transparent;
 }

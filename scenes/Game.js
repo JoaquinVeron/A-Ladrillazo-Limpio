@@ -1,362 +1,10 @@
-class Jugador extends Phaser.Physics.Arcade.Sprite {
-constructor(scene, x, y, texture) {
-  super(scene, x, y, texture);
-  scene.add.existing(this);
-  scene.physics.add.existing(this);
-
-  this.setCollideWorldBounds(true).setScale(0.3).refreshBody();
-  this.ladrillos = [];
-}
-}
-
-class Vehiculo extends Phaser.Physics.Arcade.Sprite {
-constructor(scene, x, y, texture) {
-  super(scene, x, y, texture);
-  scene.add.existing(this);
-  scene.physics.add.existing(this);
-
-  // Valores por defecto visuales/físicos
-  this.setScale(0.25);
-  this.setCollideWorldBounds(false);
-  this.setImmovable(true);
-
-  // Estado interno
-  this._velocidad = 0;
-  this._direction = 1; // 1 = hacia abajo (positivo Y), -1 = hacia arriba (negativo Y)
-  this.blinkEvent = null;
-}
-
-// Configura el vehículo después de crearlo
-configure({
-  velocidad = 600,
-  color = 0xffffff,
-  direction = 1,      // 1 o -1
-  flipY = null,       // true/false o null para derivarlo de direction
-  scale = 0.25,
-  immovable = true
-} = {}) {
-  this._velocidad = velocidad;
-  this._direction = direction;
-  this.setTint(color);
-  this.setScale(scale);
-  this.setImmovable(immovable);
-  this.setDepth(2);
-
-  // velocidad según dirección
-  this.setVelocityY(velocidad * direction);
-
-  // flipY si explícito, si no se aplica según direction (ajusta según tu sprite)
-  if (flipY === null) {
-    this.setFlipY(direction < 0);
-  } else {
-    this.setFlipY(!!flipY);
-  }
-}
-
-preUpdate(time, delta) {
-  super.preUpdate(time, delta);
-  // destruir cuando sale de la pantalla (arriba o abajo)
-  const cam = this.scene.cameras.main;
-  if (this.y > cam.height + this.height || this.y < -this.height) {
-    this.destroy();
-  }
-}
-
-// Choque
-handleCollision(jugador) {
-  if (!jugador.Intangible && !jugador.Aturdido) {
-    jugador.Intangible = true;
-    jugador.Aturdido = true;
-
-    // Vibración de la cámara
-    this.scene.cameras.main.shake(100, 0.005); // 100ms, intensidad 0.005
-
-    // Parpadeo
-    jugador.blinkEvent = this.scene.time.addEvent({
-      delay: 200,
-      callback: () => { jugador.alpha = jugador.alpha === 0.5 ? 1 : 0.5; },
-      repeat: 24
-    });
-
-    jugador.body.enable = false;
-    jugador.alpha = 0.5;
-    jugador.setTint(0xff0000);
-
-    // Termina aturdimiento (3s)
-    this.scene.time.delayedCall(3000, () => {
-      jugador.Aturdido = false;
-      jugador.alpha = 0.5;
-      jugador.setTint(0xffffff);
-      jugador.body.enable = true;
-    });
-
-    // Termina intangibilidad (5s)
-    this.scene.time.delayedCall(5000, () => {
-      jugador.Intangible = false;
-      jugador.body.enable = true;
-      jugador.alpha = 1;
-      if (jugador.blinkEvent) {
-        jugador.blinkEvent.remove();
-        jugador.blinkEvent = null;
-      }
-    });
-  }
-}
-}
-
-class Material extends Phaser.Physics.Arcade.Sprite {
-constructor(scene, x, y, texture) {
-  super(scene, x, y, texture);
-  scene.add.existing(this);
-  scene.physics.add.existing(this);
-
-  this.setImmovable(true);
-
-  this.portadorBalde = null; // Jugador que lo lleva (null si está en el piso)
-  this.lleno = false; // Solo para el balde
-  this.portadorLadrillo = null; // Jugador que lo lleva (null si está en el piso)
-
-  // Si es la mezcladora, agregamos contadores
-  if (texture === "Mezcladora") {
-    this.arenaCount = 0;
-    this.gravaCount = 0;
-  }
-
-  if (texture === "Cemento") {
-    this.cementoCount = 0;
-    this.ladrilloCount = 0;
-  }
-}
-
-// ---------- BALDE ----------
-interactuarBalde(jugador) {
-  if (this.scene.toca.Balde[jugador.texture.key] &&
-    !jugador.ManosOcupadas &&
-    !jugador.Aturdido && 
-    this.portadorBalde === null) {
-    this.cargarBalde(jugador);
-  } else if (this.portadorBalde === jugador) {
-    this.soltarBalde(jugador);
-  }
-}
-
-cargarBalde(jugador){
-    jugador.ManosOcupadas = true;
-    jugador.llevaBalde = true;
-    this.portadorBalde = jugador;
-    console.log(`${jugador.texture.key} levantó el ${this.texture.key}`);
-}
-
-soltarBalde(jugador) {
-jugador.ManosOcupadas = false;
-jugador.llevaBalde = false; 
-this.portadorBalde = null;
-this.x = jugador.x + 30;
-this.y = jugador.y + 30;
-this.setDepth(0);
-console.log(`${jugador.texture.key} soltó el ${this.texture.key}`);
-}
-
-llenarBalde(jugador, tecla, material) {
-if (Phaser.Input.Keyboard.JustDown(tecla)) {
-  // Solo si el balde está vacío
-  if (this.texture.key === "Balde" && !this.lleno) { 
-    if (material.texture.key === "Arena") { //Llena el balde de Arena
-      this.setTexture("BaldeArena");
-      this.scene.sound.play("Arena", {rate: 3});
-      this.lleno = true;
-      console.log(`${jugador.texture.key} llenó el balde con arena`);
-    } else if (material.texture.key === "Grava") { //Llena el balde de Grava
-      this.setTexture("BaldeGrava");
-      this.scene.sound.play("RecGrava", {volume: 3});
-      this.lleno = true;
-      console.log(`${jugador.texture.key} llenó el balde con grava`);
-    } else if (material.texture.key === "Cemento") { //Llena el balde de Cemento
-      this.setTexture("BaldeCemento");
-      this.lleno = true;
-      console.log(`${jugador.texture.key} llenó el balde con cemento`);
-    }
-  }
-}
-}
-
-vaciarBalde = () => {
-  this.scene.Balde.setTexture("Balde");
-  this.scene.Balde.lleno = false;
-}
-
-// ---------- LADRILLOS ----------
-interactuarLadrillos(jugador) {
-  if (this.scene.toca.Ladrillos[jugador.texture.key] &&
-    !jugador.ManosOcupadas &&
-    !jugador.Aturdido &&
-    this.portadorLadrillo === null) {
-    this.levantarLadrillo(jugador);
-    console.log(`${jugador.texture.key} levantó ladrillos`);
-  } else if (this.portadorLadrillo === jugador) {
-    this.soltarLadrillo(jugador);
-    console.log(`${jugador.texture.key} soltó el ladrillo`);
-}
-}
-
-levantarLadrillo(jugador) {
-  if (jugador.ladrillos.length < 3 && !jugador.Aturdido) {
-    jugador.ManosOcupadas = true;
-    jugador.llevaLadrillo = true;
-    // Calcula la posición Y del nuevo ladrillo
-    const offsetY = 25 - (jugador.ladrillos.length * 24);
-    const ladrillo = new Material(
-      this.scene,
-      jugador.x + 20,
-      jugador.y + offsetY,
-      "Ladrillo"
-    ).setScale(0.5).setDepth(1);
-    ladrillo.portadorLadrillo = jugador;
-    jugador.ladrillos.push(ladrillo);
-
-    // Overlap para el ladrillo individual
-    this.scene.physics.add.overlap(this.scene.Celeste, ladrillo, () => {
-      this.scene.toca.Ladrillo.Celeste = true;
-    });
-    this.scene.physics.add.overlap(this.scene.Naranja, ladrillo, () => {
-      this.scene.toca.Ladrillo.Naranja = true;
-    });
-
-    console.log(`${jugador.texture.key} levantó un ladrillo (${jugador.ladrillos.length}/3)`);
-  }
-}
-
-soltarLadrillo(jugador) {
-  if (jugador.ladrillos.length > 0) {
-    const ladrillo = jugador.ladrillos.pop();
-    ladrillo.portadorLadrillo = null;
-    ladrillo.x = jugador.x + 40;
-    ladrillo.y = jugador.y + 50;
-    ladrillo.setDepth(0);
-    console.log(`${jugador.texture.key} soltó un ladrillo (${jugador.ladrillos.length}/3)`);
-    if (jugador.ladrillos.length === 0) {
-      jugador.ManosOcupadas = false;
-      jugador.llevaLadrillo = false;
-    }
-  }
-}
-
-// ---------- MEZCLADORA ----------
-cargarMaquina(jugador, tecla, material){
-  if (Phaser.Input.Keyboard.JustDown(tecla)){
-    if (this.texture.key === "Mezcladora") {
-    if (material.texture.key === "Arena" && this.arenaCount < 2) {
-      this.arenaCount++;
-    } else if (material.texture.key === "Grava" && this.gravaCount < 1) {
-      this.gravaCount++;
-    }
-
-    // Vaciar balde siempre
-    this.vaciarBalde();
-
-    console.log(
-      `${jugador.texture.key} cargó la mezcladora con ${material.texture.key}. Arena: ${this.arenaCount}/2, Grava: ${this.gravaCount}/1`
-    );
-
-    // Chequear si ya tiene la receta completa
-    if (this.arenaCount === 2 && this.gravaCount === 1) { // Cantidad de baldes por material
-      this.funcionar();
-    }
-  }
-  }
-}
-
-funcionar(){
-console.log("✅ ¡La mezcladora está funcionando!");
-this.setTint(0x00ff00);
-
-this.scene.time.delayedCall(3000, () => {
-  this.arenaCount = 0;
-  this.gravaCount = 0;
-  this.setTint(0xffffff);
-  if (this.Cemento) {
-    this.Cemento.destroy(); // Destruir el cemento viejo si existe
-  }
-  // Crear el cemento y guardar la referencia
-  const Cemento = new Material(this.scene, this.x + 150, this.y, "Cemento").setScale(0.75);
-  this.scene.Cemento = Cemento;
-  // Agregar overlap dinámicamente
-  this.scene.physics.add.overlap(this.scene.Celeste, Cemento, () => {
-    this.scene.toca.Cemento.Celeste = true;
-  });
-  this.scene.physics.add.overlap(this.scene.Naranja, Cemento, () => {
-    this.scene.toca.Cemento.Naranja = true;
-  });
-  console.log("Se generó un balde de cemento");
-  console.log("La mezcladora está lista para otro uso");
-});
-}
-
-// ---------- CONSTRUCCION ----------
-// Si 2 de cemento y 3 ladrillos son dejados aqui, la construccion cambia de color
-avanzarConstruccion() {
-  // Chequear si ya tiene todos los elementos y cambiar a rojo
-    if (this.ladrilloCount === 1) {
-      this.setTint(0x179C35);
-    }
-}
-
-update() {
-  // Si alguien lo lleva, seguir al portador
-  if (this.portadorBalde) {
-    this.x = this.portadorBalde.x + 20;
-    this.y = this.portadorBalde.y + 50;
-    this.setDepth(this.portadorBalde.depth + 1);
-  } else if (this.portadorLadrillo) {
-    const idx = this.portadorLadrillo.ladrillos.indexOf(this);
-    // Apila los ladrillos con offset vertical
-    this.x = this.portadorLadrillo.x;
-    this.y = this.portadorLadrillo.y + 25 - (idx * 24);
-}
-}
-}
+import Jugador from "../clases/Jugador.js";
+import Vehiculo from "../clases/Vehiculo.js";
+import Material from "../clases/Material.js";
 
 export default class Game extends Phaser.Scene {
 constructor() {
   super("game");
-}
-
-preload() {
-  this.load.image("Calle", "public/assets/Calle.png");
-  this.load.image("Celeste1", "public/assets/1.png");
-  this.load.image("Naranja2", "public/assets/2.png");
-  this.load.image("Celeste", "public/assets/Celeste.png");
-  this.load.image("Naranja", "public/assets/Naranja.png");
-  this.load.image("Auto", "public/assets/auto.png");
-  this.load.image("Camion", "public/assets/Camion.png");
-  this.load.image("Construccion", "public/assets/Construccion.png");
-  this.load.image("Moto", "public/assets/Moto.png");
-  this.load.image("Arena", "public/assets/Arena.png");
-  this.load.image("Balde", "public/assets/Balde.png");
-  this.load.image("BaldeArena", "public/assets/BaldeArena.png");
-  this.load.image("BaldeGrava", "public/assets/BaldeGrava.png");
-  this.load.image("BaldeCemento", "public/assets/BaldeCemento.png");
-  this.load.image("Barrera", "public/assets/BloqueDivisor.png");
-  this.load.image("Carretilla", "public/assets/Carretilla.png");
-  this.load.image("Cemento", "public/assets/Cemento.png");
-  this.load.image("Coca", "public/assets/Coca.png");
-  this.load.image("Cuchara", "public/assets/Cuchara.png");
-  this.load.image("Espatula", "public/assets/Espatula.png");
-  this.load.image("Grava", "public/assets/Grava.png");
-  this.load.image("Ladrillos", "public/assets/Ladrillos.png");
-  this.load.image("Ladrillo", "public/assets/Ladrillo.png");
-  this.load.image("Llana", "public/assets/Llana.png");
-  this.load.image("Mezcladora", "public/assets/Mezcladora.png");
-  this.load.image("Pala", "public/assets/Pala.png");
-  this.load.image("Pasto", "public/assets/Pasto.jpg");
-  this.load.audio("Arena", "public/assets/Arena.mp3");
-  this.load.audio("Bocina", "public/assets/Bocina.mp3");
-  this.load.audio("Bocina2", "public/assets/Bocina2.mp3");
-  this.load.audio("Bocina3", "public/assets/Bocina3.mp3");
-  this.load.audio("RecGrava", "public/assets/RecGrava.mp3");
-  this.load.audio("SonidoCarretera", "public/assets/SonidoCarretera.mp3");
-  this.load.audio("SonidoCarretera2", "public/assets/SonidoCarretera2.mp3");
-
 }
 
 create() {
@@ -364,7 +12,7 @@ create() {
 // ----------- CÁMARA ----------
 
   // Configura el zoom de la cámara
-  this.cameras.main.setZoom(1.00175); // Ajusta el valor según lo que prefieras
+  this.cameras.main.setZoom(1); // Ajusta el valor según lo que prefieras
 
   // Pantalla negra inicial
   this.cameras.main.fadeIn(3000); // 3 segundos
@@ -377,20 +25,15 @@ create() {
   // Teclas para interactuar
   this.eKey = this.input.keyboard.addKey('E');
   this.fKey = this.input.keyboard.addKey('F');
+  this.jKey = this.input.keyboard.addKey('J');
+  this.kKey = this.input.keyboard.addKey('K');
+  this.lKey = this.input.keyboard.addKey('L');
 
+  // Tecla para lanzar ladrillos (apuntar + lanzar)
+  this.qKey = this.input.keyboard.addKey('Q');
+  
   // Inicializa los cursores
   this.cursors = this.input.keyboard.createCursorKeys();
-
-  // Tecla del 1 al 3 del teclado numérico derecho para Naranja
-  this.numpad1Key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE);
-  this.numpad2Key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO);
-  this.numpad3Key = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE);
-
-  // Pasto de fondo
-  this.add.image(centerX, centerY, "Pasto")
-  .setOrigin(0.5)
-  .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
-  .setAlpha(0.4);
 
   // Limita la cámara a los bordes del mapa
   const margenX = 0; // margen horizontal
@@ -401,12 +44,21 @@ create() {
   this.altoMapa = altoMapa;
   this.cameras.main.setBounds(margenX, margenY, anchoMapa - margenX * 2, altoMapa - margenY * 2);
 
+  // Pasto de fondo
+  this.add.image(centerX, centerY, "Pasto")
+  .setOrigin(0.5)
+  .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
+  .setAlpha(0.4);
+
+  // Borde
+  this.add.image(centerX, centerY, "Borde").setDepth(4);
+
   // ----------- CALLES ----------
   
   //Grupo de calles
   this.Calles = this.physics.add.group();
-  this.CalleIZQ = this.add.image(centerX - 200, centerY, "Calle").setOrigin(0.5);
-  this.CalleDER = this.add.image(centerX + 200, centerY, "Calle").setOrigin(0.5);
+  this.CalleIZQ = this.add.image(centerX - 210, centerY, "Calle").setOrigin(0.5);
+  this.CalleDER = this.add.image(centerX + 210, centerY, "Calle").setOrigin(0.5);
 
   const CalleIZQCenter = this.CalleIZQ.x;
   const CalleDERCenter = this.CalleDER.x;
@@ -454,6 +106,7 @@ create() {
 
   // Colisión entre jugadores
   this.physics.add.collider(this.Celeste, this.Naranja);
+
   // Colisión entre jugadores y barreras
   this.physics.add.collider(this.jugadores, this.barreras);
 
@@ -568,18 +221,23 @@ create() {
   delay: randomDelayMoto(),
   loop: true,
   callback: () => {
-  const { x, y } = Phaser.Utils.Array.GetRandom(posMotos);
-  const direction = y > centerY ? -1 : 1;
-  const velocidad = (1000); // motos más rápidas
+    const { x, y } = Phaser.Utils.Array.GetRandom(posMotos);
+    const direction = y > centerY ? -1 : 1;
+    const velocidad = 1000; // motos más rápidas
 
-  this.spawnVehicle(this.motos, x, y, "Moto", {
-    velocidad,
-    direction,
-    scale: 0.25,
-    size: { width: 200, height: 350 },
-    immovable: true
-  });
-}
+    this.spawnVehicle(this.motos, x, y, "Moto", {
+      velocidad,
+      direction,
+      scale: 0.25,
+      size: { width: 200, height: 350 },
+      immovable: true
+    });
+
+    // --- 1 de cada 5 motos reproduce un sonido ---
+    if (Phaser.Math.Between(1, 5) === 1) {
+      this.sound.play("RuidoMoto", { volume: 1});
+    }
+  }
 });
 
   // Colisión única
@@ -613,9 +271,14 @@ this.reproducirCarretera = () => {
     // Cuando termina, reproducir otro (aleatorio de nuevo)
     this.reproducirCarretera();
   });
-
-  sound.play({ volume: 0.01, rate: 1, detune: 100 });
-});
+  
+  if (sonidoElegido === "SonidoCarretera") {
+    sound.play({ volume: 0.01, rate: 1, detune: 100 });
+  }
+  else if (sonidoElegido === "SonidoCarretera2") {
+    sound.play({ volume: 0.05, rate: 1, detune: 100 });
+  }
+  });
 }
 
 // Iniciar el loop aleatorio
@@ -624,43 +287,70 @@ this.reproducirCarretera();
   // ---------- HERRAMIENTAS ----------
 
   this.Arena = new Material(this, centerX + 800, centerY - 300, "Arena").setScale(0.5);
-  this.Balde = new Material(this, centerX - 400, centerY + 150, "Balde").setScale(0.5).setDepth(0);
-  this.Construccion = new Material(this, centerX - 650, centerY - 300, "Construccion");
-  this.Grava = new Material(this, centerX + 800, centerY + 300, "Grava").setScale(0.25);
+  this.Balde = new Material(this, centerX - 420, centerY + 150, "Balde").setScale(0.5).setDepth(0);
+  this.Construccion = new Material(this, centerX - 650, centerY - 250, "Construccion");
+  this.Grava = new Material(this, centerX + 800, centerY + 300, "Grava").setScale(0.5);
   this.Ladrillos = new Material(this, centerX + 800, centerY, "Ladrillos").setScale(0.5);
   this.Mezcladora = new Material(this, centerX - 800, centerY + 300, "Mezcladora").setScale(0.5);
 
   // FLAGS DE COLISIONES (para manejar interacciones)
   this.toca = {
-  Arena: { Celeste: false, Naranja: false },
-  Balde: { Celeste: false, Naranja: false },
-  Construccion: { Celeste: false, Naranja: false },
-  Cemento: { Celeste: false, Naranja: false },
-  Grava: { Celeste: false, Naranja: false },
-  Ladrillos: { Celeste: false, Naranja: false },
-  Ladrillo: { Celeste: false, Naranja: false },
-  Mezcladora: { Celeste: false, Naranja: false }
+  Ladrillo: { Celeste: [], Naranja: [] }, 
 };
 
-const crearOverlap = (jugador, objeto, nombre) => { 
-this.physics.add.overlap(jugador, objeto, () => { 
-    this.toca[nombre][jugador.texture.key === "Celeste" ? "Celeste" : "Naranja"] = true;
-    if (nombre === "Ladrillos") {
-      console.log("Overlap ladrillos:", jugador.texture.key);
-    }
-  });
+// ---------- TEXTO DE PROGRESO DE CONSTRUCCIÓN CON ICONOS ----------
+
+// Ícono de balde de cemento
+this.iconoCemento = this.add.image(
+  this.Construccion.x - 80,
+  this.Construccion.y,
+  "BaldeCemento")
+  .setScale(0.5);
+
+// Texto de cantidad de cemento
+this.textoCemento = this.add.text(
+  this.iconoCemento.x,
+  this.iconoCemento.y - 80,
+  "0/2", {
+  fontFamily: "ActionComicsBlack",
+  fontSize: "20px",
+  color: "#ffffffff",
+  stroke: "#000000ff",
+  strokeThickness: 4
+}).setOrigin(0.5, 0);
+
+// Ícono de ladrillo
+this.iconoLadrillo = this.add.image(
+  this.Construccion.x + 80,
+  this.Construccion.y + 10,
+  "Ladrillo"
+).setScale(0.65);
+
+// Texto de cantidad de ladrillos
+this.textoLadrillo = this.add.text(
+  this.iconoLadrillo.x,
+  this.iconoLadrillo.y - 90,
+  "0/3", {
+  fontFamily: "ActionComicsBlack",
+  fontSize: "20px",
+  color: "#ffffffff",
+  stroke: "#000000ff",
+  strokeThickness: 4
+}).setOrigin(0.5, 0);
+
+// Función para actualizar los textos
+this.actualizarTextoConstruccion = () => {
+  const c = this.Construccion.cementoCount || 0;
+  const l = this.Construccion.ladrilloCount || 0;
+  const cMax = this.Construccion.cementoNecesario || 2;
+  const lMax = this.Construccion.ladrilloNecesario || 3;
+  this.textoCemento.setText(`${c}/${cMax}`);
+  this.textoLadrillo.setText(`${l}/${lMax}`);
 };
 
-crearOverlap(this.Celeste, this.Balde, "Balde");
-crearOverlap(this.Naranja, this.Balde, "Balde");
-crearOverlap(this.Celeste, this.Arena, "Arena");
-crearOverlap(this.Naranja, this.Arena, "Arena");
-crearOverlap(this.Celeste, this.Grava, "Grava");
-crearOverlap(this.Naranja, this.Grava, "Grava");
-crearOverlap(this.Celeste, this.Ladrillos, "Ladrillos");
-crearOverlap(this.Naranja, this.Ladrillos, "Ladrillos");
-crearOverlap(this.Celeste, this.Mezcladora, "Mezcladora");
-crearOverlap(this.Naranja, this.Mezcladora, "Mezcladora");
+// Llama una vez al crear
+this.actualizarTextoConstruccion();
+
 }
 
 spawnVehicle(group, x, y, key, opts = {}) {
@@ -671,61 +361,162 @@ return veh;
 }
 
 interactuar(jugador, tecla) {
+  // No permitir interacciones mientras apunta
+  if (jugador.aiming) return;
+
   if (Phaser.Input.Keyboard.JustDown(tecla)) {
-    // Si está tocando el balde, interactúa con el balde
-     if (this.toca.Balde[jugador.texture.key]) {
+    // Balde
+    if (this.physics.overlap(jugador, this.Balde)) {
       this.Balde.interactuarBalde(jugador, tecla);
-     } // Si está tocando la pila y puede levantar más
-     else if (
-      this.toca.Ladrillos[jugador.texture.key] &&
+    }
+    // Pila de ladrillos
+    else if (
+      this.physics.overlap(jugador, this.Ladrillos) &&
       jugador.ladrillos.length < 3 &&
       !jugador.Aturdido &&
-      !jugador.ManosOcupadas  
+      !jugador.ManosOcupadas
     ) {
       this.Ladrillos.levantarLadrillo(jugador);
     }
-    // Si NO está tocando la pila y lleva ladrillos, suelta uno
+    // Ladrillo individual en el suelo
     else if (
-      !this.toca.Ladrillos[jugador.texture.key] &&
+      this.toca.Ladrillo[jugador.texture.key].length > 0 &&
+      jugador.ladrillos.length < 3 &&
+      !jugador.Aturdido
+    ) {
+      const ladrillo = this.toca.Ladrillo[jugador.texture.key][0];
+      ladrillo.levantarLadrilloSuelo(jugador, ladrillo);
+    }
+    // Soltar ladrillo si no está tocando la pila
+    else if (
+      !this.physics.overlap(jugador, this.Ladrillos) &&
       jugador.ladrillos.length > 0
     ) {
       jugador.ladrillos[jugador.ladrillos.length - 1].soltarLadrillo(jugador);
     }
+  }
+}
+
+interactuarConstruccion(jugador, tecla) {
+  if (jugador.aiming) return;
+
+  if (Phaser.Input.Keyboard.JustDown(tecla)) {
+    if (
+      this.physics.overlap(jugador, this.Construccion) &&
+      jugador.llevaBalde &&
+      this.Balde.lleno &&
+      this.Balde.texture.key === "BaldeCemento"
+    ) {
+      this.Construccion.recibirCemento(jugador);
+    }
+    else if (
+      this.physics.overlap(jugador, this.Construccion) &&
+      jugador.ladrillos.length > 0
+    ) {
+      this.Construccion.recibirLadrillo(jugador);
     }
   }
-
-interactuarMaterial(jugador, key, material, flag) {
-if (this.toca[flag][jugador.texture.key] && jugador.llevaBalde) {
-  this.Balde.llenarBalde(jugador, key, material);
 }
-this.toca[flag][jugador.texture.key] = false;
+
+interactuarMaterial(jugador, tecla, material) {
+  if (jugador.aiming) return;
+
+  if (
+    this.physics.overlap(jugador, material) &&
+    jugador.llevaBalde
+  ) {
+    this.Balde.llenarBalde(jugador, tecla, material);
+  }
 }
 
 interactuarMezcladora(jugador, key) {
-if (this.toca.Mezcladora[jugador.texture.key] && jugador.llevaBalde) {
-  if (this.Balde.texture.key === "BaldeArena") {
-    this.Mezcladora.cargarMaquina(jugador, key, this.Arena);
-  } else if (this.Balde.texture.key === "BaldeGrava") {
-    this.Mezcladora.cargarMaquina(jugador, key, this.Grava);
+  if (jugador.aiming) return;
+
+  if (
+    this.physics.overlap(jugador, this.Mezcladora) &&
+    jugador.llevaBalde
+  ) {
+    if (this.Balde.texture.key === "BaldeArena") {
+      this.Mezcladora.cargarMaquina(jugador, key, this.Arena);
+    } else if (this.Balde.texture.key === "BaldeGrava") {
+      this.Mezcladora.cargarMaquina(jugador, key, this.Grava);
+    }
   }
 }
-this.toca.Mezcladora[jugador.texture.key] = false;
+
+interactuarLadrillo(jugador, key) {
+  if (!(this.physics.overlap(jugador, this.Construccion))){
+  
+  if (Phaser.Input.Keyboard.JustDown(key)) {
+    if (jugador.texture.key === "Celeste") {
+      if (this.Celeste.aiming) {
+        this.Celeste.lanzarLadrillo();
+      } else {
+        this.Celeste.startAiming();
+      }
+    }
+    else if (jugador.texture.key === "Naranja") {
+      if (this.Naranja.aiming) {
+        this.Naranja.lanzarLadrillo();
+      } else {
+        this.Naranja.startAiming();
+      }
+    }
+  }
+}
 }
 
 
 // ---------- MOVIMIENTO JUGADORES ----------
 moverJugador(jugador, teclas, correrKey) {
-  let speed = 250;
-  // Si el jugador lleva el balde con arena, va más lento
-  if (jugador.ManosOcupadas && this.Balde.lleno) {
+  const base = jugador.velocidadBase;
+  let speed = base;
+
+  // 1. Si lleva el balde lleno, velocidad fija 150
+  if (jugador.llevaBalde && this.Balde.lleno) {
     speed = 150;
   }
-  // Resta velocidad por cada ladrillo
-  if (jugador.ladrillos && jugador.ladrillos.length > 0) {
-    speed *= (1 - 0.1 * jugador.ladrillos.length);
+  // 2. Si tiene ladrillos, reducir por ladrillo
+  else if (jugador.ladrillos && jugador.ladrillos.length > 0) {
+    speed = jugador.velocidadBase - 45 * jugador.ladrillos.length;
+    if (speed < 60) speed = 60;
   }
 
-  // Movimiento del jugador
+  // --- Si el jugador está apuntando, mover la mira (IGNORAR SHIFT) ---
+  if (jugador.aiming) {
+    if (!jugador.aimCursor || !jugador.aimCursor.scene) {
+      const texturaMira = (jugador.texture && jugador.texture.key === "Naranja") ? "MiraNaranja" : "MiraCeleste";
+      jugador.aimCursor = this.add.image(jugador.x + 80, jugador.y, texturaMira)
+        .setScale(0.25)
+        .setDepth(3)
+        .setAlpha(0.95);
+    }
+
+    // movimiento de la mira con la misma velocidad base (NO afecta SHIFT)
+    const aimSpeed = 1000;
+    let moveX = 0, moveY = 0;
+    if (teclas.izq.isDown) moveX = -aimSpeed;
+    else if (teclas.der.isDown) moveX = aimSpeed;
+    if (teclas.arriba.isDown) moveY = -aimSpeed;
+    else if (teclas.abajo.isDown) moveY = aimSpeed;
+
+    const delta = (this.game && this.game.loop && this.game.loop.delta) ? this.game.loop.delta / 1000 : 0.016;
+    jugador.aimCursor.x += moveX * delta;
+    jugador.aimCursor.y += moveY * delta;
+
+    const minX = this.cameras.main.scrollX + 20;
+    const maxX = this.cameras.main.scrollX + this.cameras.main.displayWidth - 20;
+    const minY = this.cameras.main.scrollY + 20;
+    const maxY = this.cameras.main.scrollY + this.cameras.main.displayHeight - 20;
+    jugador.aimCursor.x = Phaser.Math.Clamp(jugador.aimCursor.x, minX, maxX);
+    jugador.aimCursor.y = Phaser.Math.Clamp(jugador.aimCursor.y, minY, maxY);
+
+    // jugador completamente quieto mientras apunta
+    jugador.setVelocity(0, 0);
+    return;
+  }
+
+  // Movimiento normal del jugador (SHIFT aumenta velocidad)
   if (!jugador.Aturdido) {
     let velX = 0, velY = 0;
 
@@ -743,8 +534,8 @@ moverJugador(jugador, teclas, correrKey) {
       velY = speed;
     }
 
-    // Correr
-    if (correrKey.isDown) {
+    // SHIFT (o correrKey) solo afecta al jugador, no a la mira
+    if (correrKey && correrKey.isDown) {
       velX *= 1.5;
       velY *= 1.5;
     }
@@ -774,46 +565,48 @@ update() {
     arriba: this.cursors.up,
     abajo: this.cursors.down
   };
-  const correrNaranja = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
+  const correrNaranja = this.lKey;
 
   this.moverJugador(this.Celeste, teclasCeleste, correrCeleste);
   this.moverJugador(this.Naranja, teclasNaranja, correrNaranja);
 
-// ---------- INTERACCIONES ----------
+  // ---------- INTERACCIONES ----------
 
 // Interacción con E
 this.interactuar(this.Celeste, this.eKey);
-this.interactuar(this.Naranja, this.numpad1Key);
+this.interactuar(this.Naranja, this.jKey);
 
-  this.toca.Balde.Celeste = false;
-  this.toca.Balde.Naranja = false;
-  this.toca.Ladrillos.Celeste = false;
-  this.toca.Ladrillos.Naranja = false;
-
-// Interacción con los materiales
+// ---------- INTERACCION CON MATERIALES ----------
 this.interactuarMaterial(this.Celeste, this.fKey, this.Arena, "Arena"); 
-this.interactuarMaterial(this.Naranja, this.numpad2Key, this.Arena, "Arena");
+this.interactuarMaterial(this.Naranja, this.kKey, this.Arena, "Arena");
 this.interactuarMaterial(this.Celeste, this.fKey, this.Grava, "Grava");
-this.interactuarMaterial(this.Naranja, this.numpad2Key, this.Grava, "Grava");
+this.interactuarMaterial(this.Naranja, this.kKey, this.Grava, "Grava");
 this.interactuarMaterial(this.Celeste, this.fKey, this.Cemento, "Cemento");
-this.interactuarMaterial(this.Naranja, this.numpad2Key, this.Cemento, "Cemento");
+this.interactuarMaterial(this.Naranja, this.kKey, this.Cemento, "Cemento");
 
 // ---------- INTERACCION CON LA MEZCLADORA ----------
-
 this.interactuarMezcladora(this.Celeste, this.fKey);
-this.interactuarMezcladora(this.Naranja, this.numpad2Key);
+this.interactuarMezcladora(this.Naranja, this.kKey);
 
-// --- NUEVO BLOQUE PARA VACIAR BALDE MANTENIENDO F ---
+// LANZAR LADRILLOS
+this.interactuarLadrillo(this.Celeste, this.fKey);
+this.interactuarLadrillo(this.Naranja, this.kKey);
+
+// ---------- INTERACCION CON LA CONSTRUCCION ----------
+this.interactuarConstruccion(this.Celeste, this.fKey);
+this.interactuarConstruccion(this.Naranja, this.kKey);
+
+
+
+// --- NUEVO BLOQUE PARA VACIAR BALDE MANTENIENDO BOTON 2 ---
 [this.Celeste, this.Naranja].forEach(jugador => {
-  // Si el jugador lleva el balde y está lleno
   if (
     jugador.llevaBalde &&
     this.Balde.lleno &&
-    this.Balde.texture.key !== "Balde" &&
-    !this.toca.Mezcladora[jugador.texture.key]
+    this.Balde.texture.key !== "Balde"
   ) {
     // Elige la tecla correcta
-    const key = jugador === this.Celeste ? this.fKey : this.numpad2Key;
+    const key = jugador === this.Celeste ? this.fKey : this.kKey;
 
     // Si la tecla está presionada y no hay temporizador, inicia el temporizador
     if (key.isDown) {
@@ -873,5 +666,13 @@ this.interactuarMezcladora(this.Naranja, this.numpad2Key);
   ) {
   this.cameras.main.pan(medioX, medioY, 250, 'Sine.easeInOut', false);
   }
+
+  // Limpiar arrays de ladrillos tocados al final de cada frame
+  this.toca.Ladrillo.Celeste = this.toca.Ladrillo.Celeste.filter(lad =>
+    this.physics.overlap(this.Celeste, lad)
+  );
+  this.toca.Ladrillo.Naranja = this.toca.Ladrillo.Naranja.filter(lad =>
+    this.physics.overlap(this.Naranja, lad)
+  );
 }
 }
