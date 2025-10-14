@@ -4,7 +4,26 @@ constructor(scene, x, y, texture) {
   scene.add.existing(this);
   scene.physics.add.existing(this);
 
-  this.setImmovable(true);
+  this.setImmovable(true).setDepth(1);
+
+  // --- HITBOX personalizada según el material ---
+  if (texture === "Arena" || texture === "Grava" || texture === "Ladrillos" || texture === "Mezcladora") {
+    const fullWidth = this.width * this.scaleX;
+    const fullHeight = this.height * this.scaleY;
+    this.body.setSize(fullWidth, fullHeight / 2);
+    this.body.setOffset(0, fullHeight / 2);
+
+    // --- Caja de colisión interna ---
+    this.hitboxInterna = scene.add.rectangle(
+      x, // posición centrada en la mitad
+      y + 5, // posición centrada en la mitad inferior
+      fullWidth * 0.45,    // ancho reducido
+      fullHeight * 0.01,  // alto reducido
+      0xff0000,
+      0 // invisible
+    );
+    scene.physics.add.existing(this.hitboxInterna, true); // true = estático
+  }
 
   this.portadorBalde = null;
   this.lleno = false;
@@ -247,7 +266,7 @@ this.scene.time.delayedCall(3000, () => {
   }
   
   // Crear el cemento y guardar la referencia
-  const Cemento = new Material(this.scene, this.x + 150, this.y, "Cemento").setScale(0.5);
+  const Cemento = new Material(this.scene, this.x - 5, this.y + 150, "Cemento").setScale(0.5);
   Cemento.usosRestantes = 3; // <-- NUEVO: contador de usos
   this.scene.Cemento = Cemento;
   console.log("Se generó un balde de cemento");
@@ -259,7 +278,7 @@ this.scene.time.delayedCall(3000, () => {
 
 recibirCemento(jugador) {
   if (
-    this.texture.key === "Construccion" &&
+    this.texture.key === "Construccion" || this.texture.key === "Construccion2" &&
     jugador.llevaBalde &&
     this.scene.Balde.lleno &&
     ["BaldeCemento"].includes(this.scene.Balde.texture.key)
@@ -279,7 +298,7 @@ recibirCemento(jugador) {
 }
 
 recibirLadrillo(jugador) {
-  if (this.texture.key === "Construccion" && jugador.ladrillos.length > 0) {
+  if (this.texture.key === "Construccion" || this.texture.key === "Construccion2" && jugador.ladrillos.length > 0) {
     if (this.ladrilloCount < this.ladrilloNecesario) {
       const ladrillo = jugador.ladrillos.pop();
       if (ladrillo) {
@@ -300,12 +319,174 @@ recibirLadrillo(jugador) {
   }
 }
 
-// --- NUEVO: verifica si se cumple la condición para cambiar de color ---
+etapa1Construccion() {
+  // Parpadeo entre texturas y transición a Construccion2
+  const parpadeos = 2;
+  const intervalo = 120;
+  for (let i = 0; i < parpadeos * 2; i++) {
+    this.scene.time.delayedCall(i * intervalo, () => {
+      if (i % 2 === 0) {
+        this.setTexture("Construccion2");
+      } else {
+        this.setTexture("Construccion");
+      }
+    });
+  }
+  this.scene.time.delayedCall(parpadeos * 2 * intervalo, () => {
+    this.setTexture("Construccion2");
+    this.setDepth(this.depth + 2);
+    this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
+    console.log(" ¡Primera Construcción completada!");
+  });
+}
+
+etapa2Construccion() {
+  // Ajustar hitbox al nuevo sprite
+  const fullWidth = this.width * this.scaleX;
+  const fullHeight = this.height * this.scaleY;
+  this.body.setSize(fullWidth, fullHeight - 38);
+  this.body.setOffset(0, fullHeight - 326);
+
+  const paredizq = this.scene.add.image(this.x - 140, this.y + 155, "Pared").setScale(1).setDepth(2);
+  const paredder = this.scene.add.image(this.x + 140, this.y + 155, "Pared").setScale(1).setDepth(2);
+
+  // --- Crear hitbox superior interna para Celeste ---
+  if (!this.hitboxInternaCeleste) {
+    this.hitboxInternaSupCeleste = this.scene.add.zone(
+      this.x,
+      this.y - 200,
+      fullWidth * 0.9,
+      fullHeight * 0.01
+    ).setOrigin(0.5);
+    this.scene.physics.add.existing(this.hitboxInternaSupCeleste);
+    this.hitboxInternaSupCeleste.body.setAllowGravity(false);
+    this.hitboxInternaSupCeleste.body.setImmovable(true);
+    this.hitboxInternaSupCeleste.setDepth(this.depth + 1);
+    this.scene.physics.add.collider(this.scene.Celeste, this.hitboxInternaSupCeleste);
+  }
+
+  // --- Crear hitbox izq inf interna para Celeste ---
+  if (!this.hitboxInfIzqCeleste) {
+    this.hitboxInfIzqCeleste = this.scene.add.zone(
+      this.x - 140,
+      this.y + 150,
+      fullWidth * 0.35,
+      fullHeight * 0.01
+    ).setOrigin(0.5);
+    this.scene.physics.add.existing(this.hitboxInfIzqCeleste);
+    this.hitboxInfIzqCeleste.body.setAllowGravity(false);
+    this.hitboxInfIzqCeleste.body.setImmovable(true);
+    this.hitboxInfIzqCeleste.setDepth(this.depth + 1);
+    this.scene.physics.add.collider(this.scene.Celeste, this.hitboxInfIzqCeleste);
+  }
+
+  // --- Crear hitbox der inf interna para Celeste ---
+  if (!this.hitboxInfDerCeleste) {
+    this.hitboxInfDerCeleste = this.scene.add.zone(
+      this.x + 140,
+      this.y + 150,
+      fullWidth * 0.35,
+      fullHeight * 0.01
+    ).setOrigin(0.5);
+    this.scene.physics.add.existing(this.hitboxInfDerCeleste);
+    this.hitboxInfDerCeleste.body.setAllowGravity(false);
+    this.hitboxInfDerCeleste.body.setImmovable(true);
+    this.hitboxInfDerCeleste.setDepth(this.depth + 1);
+    this.scene.physics.add.collider(this.scene.Celeste, this.hitboxInfDerCeleste);
+  }
+
+  // --- Crear hitbox interna para Naranja ---
+  if (!this.hitboxInternaSupNaranja) {
+    this.hitboxInternaSupNaranja = this.scene.add.zone(
+      this.x,
+      this.y - 200,
+      fullWidth * 0.9,
+      fullHeight * 0.01
+    ).setOrigin(0.5);
+    this.scene.physics.add.existing(this.hitboxInternaSupNaranja);
+    this.hitboxInternaSupNaranja.body.setAllowGravity(false);
+    this.hitboxInternaSupNaranja.body.setImmovable(true);
+    this.hitboxInternaSupNaranja.setDepth(this.depth + 1);
+    this.scene.physics.add.collider(this.scene.Naranja, this.hitboxInternaSupNaranja);
+  }
+
+  // --- Crear hitbox izq inf interna para Naranja ---
+  if (!this.hitboxInfIzqNaranja) {
+    this.hitboxInfIzqNaranja = this.scene.add.zone(
+      this.x - 140,
+      this.y + 150,
+      fullWidth * 0.35,
+      fullHeight * 0.01
+    ).setOrigin(0.5);
+    this.scene.physics.add.existing(this.hitboxInfIzqNaranja);
+    this.hitboxInfIzqNaranja.body.setAllowGravity(false);
+    this.hitboxInfIzqNaranja.body.setImmovable(true);
+    this.hitboxInfIzqNaranja.setDepth(this.depth + 1);
+    this.scene.physics.add.collider(this.scene.Naranja, this.hitboxInfIzqNaranja);
+  }
+
+  // --- Crear hitbox der inf interna para Naranja ---
+  if (!this.hitboxInfDerNaranja) {
+    this.hitboxInfDerNaranja = this.scene.add.zone(
+      this.x + 140,
+      this.y + 150,
+      fullWidth * 0.35,
+      fullHeight * 0.01
+    ).setOrigin(0.5);
+    this.scene.physics.add.existing(this.hitboxInfDerNaranja);
+    this.hitboxInfDerNaranja.body.setAllowGravity(false);
+    this.hitboxInfDerNaranja.body.setImmovable(true);
+    this.hitboxInfDerNaranja.setDepth(this.depth + 1);
+    this.scene.physics.add.collider(this.scene.Naranja, this.hitboxInfDerNaranja);
+  }
+
+  // --- NUEVO: Crear hitbox laterales fijas ---
+  if (!this.hitboxLateralIzq) {
+    this.hitboxLateralIzq = this.scene.add.zone(
+      this.x - fullWidth / 2 + 10, // posición lateral izquierda
+      this.y - 25,
+      20, // ancho de la hitbox lateral
+      fullHeight * 0.8 // alto de la hitbox lateral
+    ).setOrigin(0.5);
+    this.scene.physics.add.existing(this.hitboxLateralIzq);
+    this.hitboxLateralIzq.body.setAllowGravity(false);
+    this.hitboxLateralIzq.body.setImmovable(true);
+    this.hitboxLateralIzq.setDepth(this.depth + 1);
+    // Puedes agregar colisión con ambos jugadores si lo necesitas:
+    this.scene.physics.add.collider(this.scene.Celeste, this.hitboxLateralIzq);
+    this.scene.physics.add.collider(this.scene.Naranja, this.hitboxLateralIzq);
+  }
+
+  if (!this.hitboxLateralDer) {
+    this.hitboxLateralDer = this.scene.add.zone(
+      this.x + fullWidth / 2 - 10, // posición lateral derecha
+      this.y - 25,
+      20, // ancho de la hitbox lateral
+      fullHeight * 0.8 // alto de la hitbox lateral
+    ).setOrigin(0.5);
+    this.scene.physics.add.existing(this.hitboxLateralDer);
+    this.hitboxLateralDer.body.setAllowGravity(false);
+    this.hitboxLateralDer.body.setImmovable(true);
+    this.hitboxLateralDer.setDepth(this.depth + 1);
+    this.scene.physics.add.collider(this.scene.Celeste, this.hitboxLateralDer);
+    this.scene.physics.add.collider(this.scene.Naranja, this.hitboxLateralDer);
+  }
+
+  // Cambio de textura y sonido
+  this.y -= 50;
+  this.setDepth(1.5);
+  this.setTexture("Construccion3");
+  this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
+  console.log(" ¡Segunda Construcción completada!");
+}
+
 verificarConstruccion() {
   if (this.cementoCount >= this.cementoNecesario && this.ladrilloCount >= this.ladrilloNecesario) {
-    this.setTint(0x00ff00);
-    this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
-    console.log("¡Construcción completada!");
+    if (this.texture.key === "Construccion") {
+      this.etapa1Construccion();
+    } else if (this.texture.key === "Construccion2") {
+      this.etapa2Construccion();
+    }
 
     // Aumenta los requerimientos para la próxima vez (entre 1 y 2)
     this.cementoNecesario += Phaser.Math.Between(1, 2);
@@ -332,7 +513,64 @@ update() {
     const idx = this.portadorLadrillo.ladrillos.indexOf(this);
     this.x = this.portadorLadrillo.x;
     this.y = this.portadorLadrillo.y + 25 - (idx * 18);
-    this.setDepth(this.portadorLadrillo.depth + 1 + idx);
+    this.setDepth(this.portadorLadrillo.depth + 0.1 * (idx + 1));
+  }
+
+  // --- NUEVO: depth dinámico según posición Y del jugador ---
+  // Solo para materiales que no están siendo llevados y NO sean "Construccion"
+  if ((this.texture.key !== "Construccion" && this.texture.key !== "Construccion2" && this.texture.key !== "Construccion3" && !this.portadorBalde && !this.portadorLadrillo)) {
+    const jugadores = [this.scene.Celeste, this.scene.Naranja];
+    let depthBase = 1;
+    for (const jugador of jugadores) {
+      if (
+        jugador &&
+        Math.abs(jugador.x - this.x) < this.width * this.scaleX && // cerca en X
+        jugador.y < this.y + 50 // jugador está por arriba del material
+      ) {
+        this.setDepth(jugador.depth + 1);
+        depthBase = null;
+        break;
+      }
+    }
+    if (depthBase !== null) {
+      this.setDepth(1); // profundidad normal si ningún jugador está arriba
+    }
+  }
+
+  // --- NUEVO: depth dinámico para jugadores según posición Y respecto a la construcción ---
+  if (this.texture.key === "Construccion3") {
+    const jugadores = [this.scene.Celeste, this.scene.Naranja];
+    for (const jugador of jugadores) {
+      if (
+        jugador &&
+        Math.abs(jugador.x - this.x) < this.width * this.scaleX // cerca en X
+      ) {
+        // Si el jugador está por debajo del límite Y de la construcción
+        if (jugador.y < this.y - 205) {
+          jugador.setDepth(this.depth - 1);
+        } else {
+          jugador.setDepth(this.depth + 1);
+        }
+      }
+    }
+  }
+
+  // --- NUEVO: depth dinámico para jugadores según posición Y respecto a la pared ---
+  if (this.texture.key === "Pared") {
+    const jugadores = [this.scene.Celeste, this.scene.Naranja];
+    for (const jugador of jugadores) {
+      if (
+        jugador &&
+        Math.abs(jugador.x - this.x) < this.width * this.scaleX // cerca en X
+      ) {
+        // Si el jugador está por debajo del límite Y de la pared
+        if (jugador.y > this.y) {
+          jugador.setDepth(1.5);
+        } else {
+          jugador.setDepth(2);
+        }
+      }
+    }
   }
 
   // --- NUEVO: destruir ladrillo si sale del mapa ---
@@ -356,6 +594,23 @@ update() {
   ) {
     this.destroy();
     console.log("Un ladrillo salió del mapa y fue destruido.");
+  }
+
+  if (this.texture.key === "Construccion3") {
+    const celesteTocando = this.scene.physics.overlap(this.scene.Celeste, this);
+    const naranjaTocando = this.scene.physics.overlap(this.scene.Naranja, this);
+
+    // Si uno está tocando y el otro no, desactiva el collider
+    if (celesteTocando !== naranjaTocando) {
+      if (this.scene.colliderJugadores) {
+        this.scene.colliderJugadores.active = false;
+      }
+    } else {
+      // Si ambos están tocando o ambos no, activa el collider
+      if (this.scene.colliderJugadores && !this.scene.colliderJugadores.active) {
+        this.scene.colliderJugadores.active = true;
+      }
+    }
   }
 }
 }

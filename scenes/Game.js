@@ -1,6 +1,7 @@
 import Jugador from "../clases/Jugador.js";
 import Vehiculo from "../clases/Vehiculo.js";
 import Material from "../clases/Material.js";
+import InputSystem, { INPUT_ACTIONS } from "../system/InputSystem.js";
 
 export default class Game extends Phaser.Scene {
 constructor() {
@@ -15,12 +16,26 @@ create() {
   this.cameras.main.setZoom(1); // Ajusta el valor según lo que prefieras
 
   // Pantalla negra inicial
-  this.cameras.main.fadeIn(3000); // 3 segundos
+  this.cameras.main.fadeIn(1000); // 3 segundos
 
   // Centro de la cámara
   const centerX = this.cameras.main.width / 2;
   const centerY = this.cameras.main.height / 2;
   console.log("CenterX:", centerX, "CenterY:", centerY);
+
+  // InputSystem
+  this.inputSystem = new InputSystem(this.input);
+  this.inputSystem.configureKeyboard({
+   [INPUT_ACTIONS.UP]: [Phaser.Input.Keyboard.KeyCodes.W],
+   [INPUT_ACTIONS.DOWN]: [Phaser.Input.Keyboard.KeyCodes.S],
+   [INPUT_ACTIONS.LEFT]: [Phaser.Input.Keyboard.KeyCodes.A],
+   [INPUT_ACTIONS.RIGHT]: [Phaser.Input.Keyboard.KeyCodes.D],
+   [INPUT_ACTIONS.EAST]: [Phaser.Input.Keyboard.KeyCodes.E],
+   [INPUT_ACTIONS.SOUTH]: [Phaser.Input.Keyboard.KeyCodes.F],
+   [INPUT_ACTIONS.WEST]: [Phaser.Input.Keyboard.KeyCodes.SHIFT],
+  },
+  "player1"
+);
 
   // Teclas para interactuar
   this.eKey = this.input.keyboard.addKey('E');
@@ -44,14 +59,24 @@ create() {
   this.altoMapa = altoMapa;
   this.cameras.main.setBounds(margenX, margenY, anchoMapa - margenX * 2, altoMapa - margenY * 2);
 
+  // ----------- DETALLES ----------
+
+  // Sombreado
+  //this.add.image(centerX, centerY, "Sombreado").setDepth(4);
+
   // Pasto de fondo
-  this.add.image(centerX, centerY, "Pasto")
+  this.pasto = this.add.image(centerX, centerY, "Pasto")
+  .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+
+  // Pasto detalle
+  this.add.image(centerX, centerY, "PastoDetalle")
   .setOrigin(0.5)
   .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
-  .setAlpha(0.4);
+  .setAlpha(1)
+  .setDepth(1);
 
   // Borde
-  this.add.image(centerX, centerY, "Borde").setDepth(4);
+  this.add.image(centerX, centerY, "Borde").setDepth(5);
 
   // ----------- CALLES ----------
   
@@ -84,14 +109,14 @@ create() {
   // Crea las barreras en las posiciones elegidas
   this.barreras = [];
   for (const y of posicionesElegidas) {
-    const barrera = this.physics.add.sprite(centerX, y, "Barrera").setImmovable(true);
+    const barrera = this.physics.add.sprite(centerX, y, "Barrera").setImmovable(true).setDepth(1);
     this.barreras.push(barrera);
   }
 
   // ---------- JUGADORES ----------
   
-  this.Celeste = new Jugador(this, centerX - 500, centerY + 75, "Celeste");
-  this.Naranja = new Jugador(this, centerX - 500, centerY + 225, "Naranja");
+  this.Celeste = new Jugador(this, centerX - 500, centerY + 125, "Celeste");
+  this.Naranja = new Jugador(this, centerX - 500, centerY + 425, "Naranja");
 
   // Grupo de jugadores
   this.jugadores = this.physics.add.group();
@@ -102,13 +127,17 @@ create() {
   this.jugadores.Intangible = false;
   this.jugadores.Aturdido = false;
   this.jugadores.ManosOcupadas = false;
-  this.jugadores.setDepth(1);
+  this.jugadores.setDepth(2);
 
   // Colisión entre jugadores
-  this.physics.add.collider(this.Celeste, this.Naranja);
+  this.colliderJugadores = this.physics.add.collider(this.Celeste, this.Naranja);
 
   // Colisión entre jugadores y barreras
   this.physics.add.collider(this.jugadores, this.barreras);
+
+  // Calcular el punto medio entre ambos jugadores
+  const medioX = (this.Celeste.x + this.Naranja.x) / 2;
+  const medioY = (this.Celeste.y + this.Naranja.y) / 2;
 
   // ---------- VEHICULOS ----------
 
@@ -162,24 +191,31 @@ create() {
       if (!puedeGenerar) return;
 
       const tipos = ["Auto", "Auto", "Auto","Auto", "Auto","Auto", "Auto", "Camion"];
-      const tipo = Phaser.Utils.Array.GetRandom(tipos);
+      let tipo = Phaser.Utils.Array.GetRandom(tipos);
 
       let velocidad = 600;
       let scale = 0.25;
 
+      // --- CAMBIO: elegir textura de camión según lado ---
+      let texturaCamion = "Camion";
       if (tipo === "Camion") {
         velocidad = 550;
         color = 0xffffff;
         scale = 0.35;
-        // Ajusta la posición Y del camión según dirección
         if (direction === 1) {
-          y -= 60; // camión que va hacia abajo, aparece más arriba
+          y -= 60;
         } else {
-          y += 60; // camión que va hacia arriba, aparece más abajo
+          y += 60;
+        }
+        if (x > centerX) {
+          texturaCamion = "Camion2"; // lado derecho
         }
       }
 
-      this.spawnVehicle(this.autos, x, y, tipo, {
+      // Usar la textura correcta
+      const texturaFinal = tipo === "Camion" ? texturaCamion : tipo;
+
+      this.spawnVehicle(this.autos, x, y, texturaFinal, {
         velocidad,
         color,
         direction,
@@ -285,13 +321,24 @@ this.reproducirCarretera = () => {
 this.reproducirCarretera();
 
   // ---------- HERRAMIENTAS ----------
+  this.Arena = new Material(this, centerX + 700, centerY - 300, "Arena").setScale(0.5);
+  this.Balde = new Material(this, medioX, medioY, "Balde").setScale(0.5).setDepth(0);
+  this.Construccion = new Material(this, centerX - 649, centerY - 175, "Construccion").setDepth(-1).setScale(1);
+  this.Grava = new Material(this, centerX + 700, centerY + 300, "Grava").setScale(0.5);
+  this.Ladrillos = new Material(this, centerX + 700, centerY, "Ladrillos").setScale(0.5);
+  this.Mezcladora = new Material(this, centerX - 800, medioY, "Mezcladora").setScale(0.5);
+  
 
-  this.Arena = new Material(this, centerX + 800, centerY - 300, "Arena").setScale(0.5);
-  this.Balde = new Material(this, centerX - 420, centerY + 150, "Balde").setScale(0.5).setDepth(0);
-  this.Construccion = new Material(this, centerX - 650, centerY - 250, "Construccion");
-  this.Grava = new Material(this, centerX + 800, centerY + 300, "Grava").setScale(0.5);
-  this.Ladrillos = new Material(this, centerX + 800, centerY, "Ladrillos").setScale(0.5);
-  this.Mezcladora = new Material(this, centerX - 800, centerY + 300, "Mezcladora").setScale(0.5);
+  // --- NUEVO: array con todos los materiales excepto Construccion ---
+  this.materiales = [
+    this.Arena,
+    this.Balde,
+    this.Grava,
+    this.Ladrillos,
+    this.Mezcladora,
+    this.Construccion
+    // Si agregás más materiales, ponelos acá
+  ];
 
   // FLAGS DE COLISIONES (para manejar interacciones)
   this.toca = {
@@ -305,7 +352,8 @@ this.iconoCemento = this.add.image(
   this.Construccion.x - 80,
   this.Construccion.y,
   "BaldeCemento")
-  .setScale(0.5);
+  .setScale(0.5)
+  .setDepth(4);
 
 // Texto de cantidad de cemento
 this.textoCemento = this.add.text(
@@ -317,14 +365,16 @@ this.textoCemento = this.add.text(
   color: "#ffffffff",
   stroke: "#000000ff",
   strokeThickness: 4
-}).setOrigin(0.5, 0);
+}).setOrigin(0.5, 0)
+  .setDepth(4);
 
 // Ícono de ladrillo
 this.iconoLadrillo = this.add.image(
   this.Construccion.x + 80,
   this.Construccion.y + 10,
   "Ladrillo"
-).setScale(0.65);
+).setScale(0.65)
+  .setDepth(4);
 
 // Texto de cantidad de ladrillos
 this.textoLadrillo = this.add.text(
@@ -336,7 +386,8 @@ this.textoLadrillo = this.add.text(
   color: "#ffffffff",
   stroke: "#000000ff",
   strokeThickness: 4
-}).setOrigin(0.5, 0);
+}).setOrigin(0.5, 0)
+  .setDepth(4);
 
 // Función para actualizar los textos
 this.actualizarTextoConstruccion = () => {
@@ -346,11 +397,43 @@ this.actualizarTextoConstruccion = () => {
   const lMax = this.Construccion.ladrilloNecesario || 3;
   this.textoCemento.setText(`${c}/${cMax}`);
   this.textoLadrillo.setText(`${l}/${lMax}`);
-};
+  if (c >= cMax) {
+    this.textoCemento.setColor("#00ff00");
+  } else {
+    this.textoCemento.setColor("#ffffffff");
+  }
 
-// Llama una vez al crear
-this.actualizarTextoConstruccion();
+  if (l >= lMax) {
+    this.textoLadrillo.setColor("#00ff00");
+  } else {
+    this.textoLadrillo.setColor("#ffffffff");
+  }
+}
 
+// Ejemplo para ambos jugadores y todos los materiales con hitbox interna
+this.materiales.forEach(material => {
+  if (material.hitboxInterna) {
+    this.physics.add.collider(this.Celeste, material.hitboxInterna);
+    this.physics.add.collider(this.Naranja, material.hitboxInterna);
+  }
+});
+
+// --- TEMPORIZADOR ---
+  this.tiempoRestante = 240; // 4 minutos en segundos
+  this.textoTimer = this.add.text(
+    150,
+    60,
+    "04:00",
+    {
+      fontFamily: "ActionComicsBlack",
+      fontSize: "40px",
+      color: "#ffffffff",
+      stroke: "#000000",
+      strokeThickness: 6
+    }
+  ).setOrigin(0.5).setDepth(4);
+
+  this.gameOverMostrado = false;
 }
 
 spawnVehicle(group, x, y, key, opts = {}) {
@@ -548,13 +631,35 @@ moverJugador(jugador, teclas, correrKey) {
 }
 
 update() {
+  // --- DETENER TODO EN GAME OVER ---
+  if (this.gameOverMostrado) {
+    // Detener jugadores
+    this.Celeste.setVelocity(0, 0);
+    this.Naranja.setVelocity(0, 0);
+
+    // Detener autos y motos
+    this.autos.getChildren().forEach(auto => auto.setVelocity(0, 0));
+    this.motos.getChildren().forEach(moto => moto.setVelocity(0, 0));
+
+    // Opcional: detener materiales si tienen movimiento
+    this.materiales.forEach(material => {
+      if (material.body) material.body.setVelocity(0, 0);
+    });
+
+    if (this.colliderJugadores) this.colliderJugadores.active = false;
+  this.physics.world.colliders.getActive().forEach(collider => {
+    collider.active = false;
+  });
+
+    return; // No ejecutar más lógica de update
+  }
 
   // TECLAS CELESTE
   const teclasCeleste = {
-    izq: this.input.keyboard.addKey('A'),
-    der: this.input.keyboard.addKey('D'),
-    arriba: this.input.keyboard.addKey('W'),
-    abajo: this.input.keyboard.addKey('S')
+    izq: this.input.keyboard.addKey('A') || this.inputSystem.isPressed(INPUT_ACTIONS.LEFT, "player1"),
+    der: this.input.keyboard.addKey('D') || this.inputSystem.isPressed(INPUT_ACTIONS.RIGHT, "player1"),
+    arriba: this.input.keyboard.addKey('W') || this.inputSystem.isPressed(INPUT_ACTIONS.UP, "player1"),
+    abajo: this.input.keyboard.addKey('S') || this.inputSystem.isPressed(INPUT_ACTIONS.DOWN, "player1")
   };
   const correrCeleste = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
@@ -634,6 +739,12 @@ this.interactuarConstruccion(this.Naranja, this.kKey);
 
 // ---------- ACTUALIZACIONES ----------
 
+if (this.Construccion.texture.key !== "Construccion") {
+  this.pasto.setTexture("Pasto2");
+} else {
+  this.pasto.setTexture("Pasto");
+}
+
   // Actualizar posición del balde si alguien lo lleva
   this.Balde.update();
 
@@ -644,28 +755,30 @@ this.interactuarConstruccion(this.Naranja, this.kKey);
   }
 });
 
-  // Calcular el punto medio entre ambos jugadores
-  let medioX = (this.Celeste.x + this.Naranja.x) / 2;
-  let medioY = (this.Celeste.y + this.Naranja.y) / 2;
+// Actualizar texto de construcción
+this.actualizarTextoConstruccion();
 
-  // Limitar el centro de la cámara dentro de los márgenes
-  const minX = this.cameras.main.displayWidth / 2;
-  const maxX = this.anchoMapa - this.cameras.main.displayWidth / 2;
-  const minY = this.cameras.main.displayHeight / 2;
-  const maxY = this.altoMapa - this.cameras.main.displayHeight / 2;
-
-  medioX = Phaser.Math.Clamp(medioX, minX, maxX);
-  medioY = Phaser.Math.Clamp(medioY, minY, maxY);
-
-  this.cameras.main.centerOn(medioX, medioY);
-
-  // Solo pan si el punto medio cambió significativamente
-  if (
-  Math.abs(this.cameras.main.scrollX + this.cameras.main.displayWidth / 2 - medioX) > 2 ||
-  Math.abs(this.cameras.main.scrollY + this.cameras.main.displayHeight / 2 - medioY) > 2
-  ) {
-  this.cameras.main.pan(medioX, medioY, 250, 'Sine.easeInOut', false);
+// Si el jugador toca la construccion y tiene la textura en "Construccion", ajustar tamaño de jugador, si no volver a la normalidad
+[this.Celeste, this.Naranja].forEach(jugador => {
+  // Inicializa la propiedad si no existe
+  if (typeof jugador.estabaEnConstruccion === "undefined") {
+    jugador.estabaEnConstruccion = false;
   }
+
+  const enConstruccion = this.physics.overlap(jugador, this.Construccion) && this.Construccion.texture.key === "Construccion";
+  const targetScale = enConstruccion ? 0.28 : 0.3;
+
+  // Solo crear el tween si el estado cambió
+  if (jugador.estabaEnConstruccion !== enConstruccion) {
+    this.tweens.add({
+      targets: jugador,
+      scale: targetScale,
+      duration: 400,
+      ease: 'Sine.easeInOut'
+    });
+    jugador.estabaEnConstruccion = enConstruccion;
+  }
+});
 
   // Limpiar arrays de ladrillos tocados al final de cada frame
   this.toca.Ladrillo.Celeste = this.toca.Ladrillo.Celeste.filter(lad =>
@@ -674,5 +787,75 @@ this.interactuarConstruccion(this.Naranja, this.kKey);
   this.toca.Ladrillo.Naranja = this.toca.Ladrillo.Naranja.filter(lad =>
     this.physics.overlap(this.Naranja, lad)
   );
+  
+  // --- NUEVO: actualizar todos los materiales ---
+  this.materiales.forEach(material => {
+    if (material && typeof material.update === "function") material.update();
+  });
+
+// --- Aumentar hitbox interna de cada jugador si está tocando la construcción ---
+if (this.Construccion.hitboxInternaSupCeleste) {
+  if (this.physics.overlap(this.Celeste, this.Construccion)) {
+    this.Construccion.hitboxInternaSupCeleste.setSize(405, 205);
+  } else {
+    this.Construccion.hitboxInternaSupCeleste.setSize(405, 9);
+  }
+}
+if (this.Construccion.hitboxInternaSupNaranja) {
+  if (this.physics.overlap(this.Naranja, this.Construccion)) {
+    this.Construccion.hitboxInternaSupNaranja.setSize(405, 205);
+  } else {
+    this.Construccion.hitboxInternaSupNaranja.setSize(405, 9);
+  }
+}
+
+// --- TEMPORIZADOR ---
+  if (!this.gameOverMostrado) {
+    // Solo actualiza si no terminó el juego
+    if (this.tiempoRestante > 0) {
+      this.tiempoRestante -= this.game.loop.delta / 1000; // Resta segundos según delta
+      if (this.tiempoRestante < 0) this.tiempoRestante = 0;
+
+      // Formatea minutos y segundos
+      const minutos = Math.floor(this.tiempoRestante / 60);
+      const segundos = Math.floor(this.tiempoRestante % 60);
+      const textoFormateado = `${minutos.toString().padStart(2, "0")}:${segundos.toString().padStart(2, "0")}`;
+      this.textoTimer.setText(textoFormateado);
+
+      // Cambia el color si quedan 10 segundos o menos
+      if (this.tiempoRestante <= 10) {
+        this.textoTimer.setColor("#ff0000");
+      } else {
+        this.textoTimer.setColor("#ffffffff");
+      }
+
+
+    } else {
+      // GAME OVER
+      this.gameOverMostrado = true;
+      this.textoTimer.destroy();
+      this.add.rectangle(
+        this.cameras.main.width / 2,
+        this.cameras.main.height / 2,
+        this.cameras.main.width,
+        this.cameras.main.height,
+        0x000000,
+        0.7
+      ).setDepth(4);
+
+      this.add.text(
+        this.cameras.main.width / 2,
+        this.cameras.main.height / 2,
+        "GAME OVER",
+        {
+          fontFamily: "ActionComicsBlack",
+          fontSize: "80px",
+          color: "#ff0000",
+          stroke: "#000000",
+          strokeThickness: 8
+        }
+      ).setOrigin(0.5).setDepth(4);
+    }
+  }
 }
 }
