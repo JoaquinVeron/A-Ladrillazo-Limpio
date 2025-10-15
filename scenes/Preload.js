@@ -25,6 +25,10 @@ export default class Preload extends Phaser.Scene {
     this.load.image("BaldeCemento", "BaldeCemento.png");
     this.load.image("Barrera", "BloqueDivisor.png");
     this.load.image("Borde", "Borde.png");
+    this.load.image("BotonE", "BotonE.png");
+    this.load.image("BotonF", "BotonF.png");
+    this.load.image("BotonJ", "BotonJ.png");
+    this.load.image("BotonK", "BotonK.png");
     this.load.image("Carretilla", "Carretilla.png");
     this.load.image("Cemento", "Cemento.png");
     this.load.image("Coca", "Coca.png");
@@ -43,9 +47,11 @@ export default class Preload extends Phaser.Scene {
     this.load.image("MiraNaranja", "MiraNaranja.png");
     this.load.image("Pala", "Pala.png");
     this.load.image("Pared", "Pared.png");
+    this.load.image("Pausa", "Pausa.png");
     this.load.image("Pasto", "Pasto.png");
     this.load.image("Pasto2", "Pasto2.png");
     this.load.image("PastoDetalle", "Pastodetalle.png");
+    this.load.image("Reloj", "Reloj.png");
     this.load.image("Sombreado", "Sombreado.png");
 
     // Sonidos

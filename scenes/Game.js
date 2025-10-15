@@ -66,24 +66,25 @@ create() {
 
   // Pasto de fondo
   this.pasto = this.add.image(centerX, centerY, "Pasto")
-  .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+  .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
+  .setDepth(1);
 
   // Pasto detalle
   this.add.image(centerX, centerY, "PastoDetalle")
   .setOrigin(0.5)
   .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
   .setAlpha(1)
-  .setDepth(1);
+  .setDepth(2);
 
   // Borde
-  this.add.image(centerX, centerY, "Borde").setDepth(5);
+  this.add.image(centerX, centerY, "Borde").setDepth(6);
 
   // ----------- CALLES ----------
   
   //Grupo de calles
   this.Calles = this.physics.add.group();
-  this.CalleIZQ = this.add.image(centerX - 210, centerY, "Calle").setOrigin(0.5);
-  this.CalleDER = this.add.image(centerX + 210, centerY, "Calle").setOrigin(0.5);
+  this.CalleIZQ = this.add.image(centerX - 210, centerY, "Calle").setOrigin(0.5).setDepth(3);
+  this.CalleDER = this.add.image(centerX + 210, centerY, "Calle").setOrigin(0.5).setDepth(3);
 
   const CalleIZQCenter = this.CalleIZQ.x;
   const CalleDERCenter = this.CalleDER.x;
@@ -109,7 +110,7 @@ create() {
   // Crea las barreras en las posiciones elegidas
   this.barreras = [];
   for (const y of posicionesElegidas) {
-    const barrera = this.physics.add.sprite(centerX, y, "Barrera").setImmovable(true).setDepth(1);
+    const barrera = this.physics.add.sprite(centerX, y, "Barrera").setImmovable(true).setDepth(3);
     this.barreras.push(barrera);
   }
 
@@ -127,7 +128,7 @@ create() {
   this.jugadores.Intangible = false;
   this.jugadores.Aturdido = false;
   this.jugadores.ManosOcupadas = false;
-  this.jugadores.setDepth(2);
+  this.jugadores.setDepth(5);
 
   // Colisión entre jugadores
   this.colliderJugadores = this.physics.add.collider(this.Celeste, this.Naranja);
@@ -320,14 +321,29 @@ this.reproducirCarretera = () => {
 // Iniciar el loop aleatorio
 this.reproducirCarretera();
 
-  // ---------- HERRAMIENTAS ----------
+  // ---------- MATERIALES ----------
   this.Arena = new Material(this, centerX + 700, centerY - 300, "Arena").setScale(0.5);
-  this.Balde = new Material(this, medioX, medioY, "Balde").setScale(0.5).setDepth(0);
-  this.Construccion = new Material(this, centerX - 649, centerY - 175, "Construccion").setDepth(-1).setScale(1);
+  this.Balde = new Material(this, medioX, medioY, "Balde").setScale(0.5).setDepth(4);
+  this.Construccion = new Material(this, centerX - 649, centerY - 175, "Construccion").setDepth(0).setScale(1);
   this.Grava = new Material(this, centerX + 700, centerY + 300, "Grava").setScale(0.5);
   this.Ladrillos = new Material(this, centerX + 700, centerY, "Ladrillos").setScale(0.5);
   this.Mezcladora = new Material(this, centerX - 800, medioY, "Mezcladora").setScale(0.5);
-  
+
+  // Botones para Celeste
+  this.BotonBaldeE = this.add.image(this.Balde.x , this.Balde.y - 75, "BotonE").setDepth(6);
+  this.BotonLadrillosE = this.add.image(this.Ladrillos.x , this.Ladrillos.y - 150, "BotonE").setDepth(6);
+  this.BotonArenaF = this.add.image(this.Arena.x , this.Arena.y - 100, "BotonF").setDepth(6);
+  this.BotonGravaF = this.add.image(this.Grava.x , this.Grava.y - 100, "BotonF").setDepth(6);
+  this.BotonMezcladoraF = this.add.image(this.Mezcladora.x , this.Mezcladora.y - 75, "BotonF").setDepth(6);
+  this.BotonCementoF = this.add.image(centerX, centerY, "BotonF").setDepth(6).setAlpha(0);
+
+  // Botones para Naranja
+  this.BotonBaldeJ = this.add.image(this.Balde.x , this.Balde.y - 75, "BotonJ").setDepth(6);
+  this.BotonLadrillosJ = this.add.image(this.Ladrillos.x , this.Ladrillos.y - 150, "BotonJ").setDepth(6);
+  this.BotonArenaK = this.add.image(this.Arena.x , this.Arena.y - 100, "BotonK").setDepth(6);
+  this.BotonGravaK = this.add.image(this.Grava.x , this.Grava.y - 100, "BotonK").setDepth(6);
+  this.BotonMezcladoraK = this.add.image(this.Mezcladora.x , this.Mezcladora.y - 75, "BotonK").setDepth(6);
+  this.BotonCementoK = this.add.image(centerX, centerY, "BotonK").setDepth(6).setAlpha(0);
 
   // --- NUEVO: array con todos los materiales excepto Construccion ---
   this.materiales = [
@@ -347,13 +363,15 @@ this.reproducirCarretera();
 
 // ---------- TEXTO DE PROGRESO DE CONSTRUCCIÓN CON ICONOS ----------
 
+// CONSTRUCCION
+
 // Ícono de balde de cemento
 this.iconoCemento = this.add.image(
   this.Construccion.x - 80,
   this.Construccion.y,
   "BaldeCemento")
   .setScale(0.5)
-  .setDepth(4);
+  .setDepth(6);
 
 // Texto de cantidad de cemento
 this.textoCemento = this.add.text(
@@ -366,7 +384,7 @@ this.textoCemento = this.add.text(
   stroke: "#000000ff",
   strokeThickness: 4
 }).setOrigin(0.5, 0)
-  .setDepth(4);
+  .setDepth(6);
 
 // Ícono de ladrillo
 this.iconoLadrillo = this.add.image(
@@ -374,7 +392,7 @@ this.iconoLadrillo = this.add.image(
   this.Construccion.y + 10,
   "Ladrillo"
 ).setScale(0.65)
-  .setDepth(4);
+  .setDepth(6);
 
 // Texto de cantidad de ladrillos
 this.textoLadrillo = this.add.text(
@@ -387,7 +405,7 @@ this.textoLadrillo = this.add.text(
   stroke: "#000000ff",
   strokeThickness: 4
 }).setOrigin(0.5, 0)
-  .setDepth(4);
+  .setDepth(6);
 
 // Función para actualizar los textos
 this.actualizarTextoConstruccion = () => {
@@ -410,6 +428,58 @@ this.actualizarTextoConstruccion = () => {
   }
 }
 
+// MEZCLADORA
+
+// Ícono de balde de arena para la mezcladora
+this.iconoArena = this.add.image(
+  this.Mezcladora.x - 40,
+  this.Mezcladora.y - 80,
+  "BaldeArena"
+).setScale(0.35).setDepth(6);
+
+// Texto de cantidad de arena
+this.textoArena = this.add.text(
+  this.iconoArena.x,
+  this.iconoArena.y - 80,
+  "0/2", {
+    fontFamily: "ActionComicsBlack",
+    fontSize: "20px",
+    color: "#ffffffff",
+    stroke: "#000000ff",
+    strokeThickness: 4
+  }
+).setOrigin(0.5, 0).setDepth(6);
+
+// Ícono de balde de grava para la mezcladora
+this.iconoGrava = this.add.image(
+  this.Mezcladora.x + 40,
+  this.Mezcladora.y - 80,
+  "BaldeGrava"
+).setScale(0.35).setDepth(6);
+
+// Texto de cantidad de grava
+this.textoGrava = this.add.text(
+  this.iconoGrava.x,
+  this.iconoGrava.y - 80,
+  "0/1", {
+    fontFamily: "ActionComicsBlack",
+    fontSize: "20px",
+    color: "#ffffffff",
+    stroke: "#000000ff",
+    strokeThickness: 4
+  }
+).setOrigin(0.5, 0).setDepth(6);
+
+// Función para actualizar los textos de la mezcladora
+this.actualizarTextoMezcladora = () => {
+  const arena = this.Mezcladora.arenaCount || 0;
+  const grava = this.Mezcladora.gravaCount || 0;
+  this.textoArena.setText(`${arena}/2`);
+  this.textoGrava.setText(`${grava}/1`);
+  this.textoArena.setColor(arena >= 2 ? "#00ff00" : "#ffffffff");
+  this.textoGrava.setColor(grava >= 1 ? "#00ff00" : "#ffffffff");
+};
+
 // Ejemplo para ambos jugadores y todos los materiales con hitbox interna
 this.materiales.forEach(material => {
   if (material.hitboxInterna) {
@@ -420,9 +490,11 @@ this.materiales.forEach(material => {
 
 // --- TEMPORIZADOR ---
   this.tiempoRestante = 240; // 4 minutos en segundos
+
+  this.relojIcono = this.add.image(centerX - 875, centerY - 455, "Reloj").setScale(1).setDepth(6);
   this.textoTimer = this.add.text(
-    150,
-    60,
+    this.relojIcono.x + 160,
+    this.relojIcono.y - 10,
     "04:00",
     {
       fontFamily: "ActionComicsBlack",
@@ -431,7 +503,7 @@ this.materiales.forEach(material => {
       stroke: "#000000",
       strokeThickness: 6
     }
-  ).setOrigin(0.5).setDepth(4);
+  ).setOrigin(0.5).setDepth(6);
 
   this.gameOverMostrado = false;
 }
@@ -579,7 +651,7 @@ moverJugador(jugador, teclas, correrKey) {
       const texturaMira = (jugador.texture && jugador.texture.key === "Naranja") ? "MiraNaranja" : "MiraCeleste";
       jugador.aimCursor = this.add.image(jugador.x + 80, jugador.y, texturaMira)
         .setScale(0.25)
-        .setDepth(3)
+        .setDepth(6)
         .setAlpha(0.95);
     }
 
@@ -745,6 +817,87 @@ this.interactuarConstruccion(this.Naranja, this.kKey);
   }
 });
 
+// ---------- BOTONES ----------
+
+// ---------- BOTONES CELESTE ----------
+this.BotonArenaF.setAlpha(
+  this.physics.overlap(this.Celeste, this.Arena) && !this.Balde.lleno && this.Celeste.llevaBalde ? 1 : 0
+);
+
+this.BotonGravaF.setAlpha(
+  this.physics.overlap(this.Celeste, this.Grava) && !this.Balde.lleno && this.Celeste.llevaBalde ? 1 : 0
+);
+
+this.BotonMezcladoraF.setAlpha(
+  this.physics.overlap(this.Celeste, this.Mezcladora) && this.Balde.lleno && this.Celeste.llevaBalde && this.Balde.texture.key !== "BaldeCemento" && !this.Cemento ? 1 : 0
+);
+
+// ---------- BOTONES NARANJA ----------
+this.BotonArenaK.setAlpha(
+  this.physics.overlap(this.Naranja, this.Arena) && !this.Balde.lleno && this.Naranja.llevaBalde ? 1 : 0
+);
+
+this.BotonGravaK.setAlpha(
+  this.physics.overlap(this.Naranja, this.Grava) && !this.Balde.lleno && this.Naranja.llevaBalde ? 1 : 0
+);
+
+this.BotonMezcladoraK.setAlpha(
+  this.physics.overlap(this.Naranja, this.Mezcladora) && this.Balde.lleno && this.Naranja.llevaBalde && this.Balde.texture.key !== "BaldeCemento" && !this.Cemento ? 1 : 0
+);
+
+// ---------- BOTONES CEMENTO ----------
+if (this.Cemento) {
+  const celestePuedeCemento = this.physics.overlap(this.Celeste, this.Cemento) && !this.Balde.lleno && this.Celeste.llevaBalde;
+  const naranjaPuedeCemento = this.physics.overlap(this.Naranja, this.Cemento) && !this.Balde.lleno && this.Naranja.llevaBalde;
+
+  if (celestePuedeCemento && naranjaPuedeCemento) {
+    this.BotonCementoF.setAlpha(1);
+    this.BotonCementoK.setAlpha(1);
+    this.BotonCementoF.setPosition(this.Cemento.x - 40, this.Cemento.y - 75);
+    this.BotonCementoK.setPosition(this.Cemento.x + 40, this.Cemento.y - 75);
+  } else {
+    this.BotonCementoF.setAlpha(celestePuedeCemento ? 1 : 0);
+    this.BotonCementoK.setAlpha(naranjaPuedeCemento ? 1 : 0);
+    this.BotonCementoF.setPosition(this.Cemento.x, this.Cemento.y - 75);
+    this.BotonCementoK.setPosition(this.Cemento.x, this.Cemento.y - 75);
+  }
+} else {
+  this.BotonCementoF.setAlpha(0);
+  this.BotonCementoK.setAlpha(0);
+}
+
+// ---------- BOTONES LADRILLOS ----------
+const celestePuedeLadrillo = this.physics.overlap(this.Celeste, this.Ladrillos) && this.Celeste.ladrillos.length < 3 && !this.Celeste.ManosOcupadas;
+const naranjaPuedeLadrillo = this.physics.overlap(this.Naranja, this.Ladrillos) && this.Naranja.ladrillos.length < 3 && !this.Naranja.ManosOcupadas;
+
+if (celestePuedeLadrillo && naranjaPuedeLadrillo) {
+  this.BotonLadrillosE.setAlpha(1);
+  this.BotonLadrillosJ.setAlpha(1);
+  this.BotonLadrillosE.setPosition(this.Ladrillos.x - 40, this.Ladrillos.y - 150);
+  this.BotonLadrillosJ.setPosition(this.Ladrillos.x + 40, this.Ladrillos.y - 150);
+} else {
+  this.BotonLadrillosE.setAlpha(celestePuedeLadrillo ? 1 : 0);
+  this.BotonLadrillosJ.setAlpha(naranjaPuedeLadrillo ? 1 : 0);
+  this.BotonLadrillosE.setPosition(this.Ladrillos.x, this.Ladrillos.y - 150);
+  this.BotonLadrillosJ.setPosition(this.Ladrillos.x, this.Ladrillos.y - 150);
+}
+
+// ---------- BOTONES BALDE ----------
+const celestePuedeBalde = this.physics.overlap(this.Celeste, this.Balde) && !this.Celeste.llevaBalde && !this.Celeste.Aturdido && !this.Naranja.llevaBalde;
+const naranjaPuedeBalde = this.physics.overlap(this.Naranja, this.Balde) && !this.Naranja.llevaBalde && !this.Naranja.Aturdido && !this.Celeste.llevaBalde;
+
+if (celestePuedeBalde && naranjaPuedeBalde) {
+  this.BotonBaldeE.setAlpha(1);
+  this.BotonBaldeJ.setAlpha(1);
+  this.BotonBaldeE.setPosition(this.Balde.x - 40, this.Balde.y - 75);
+  this.BotonBaldeJ.setPosition(this.Balde.x + 40, this.Balde.y - 75);
+} else {
+  this.BotonBaldeE.setAlpha(celestePuedeBalde ? 1 : 0);
+  this.BotonBaldeJ.setAlpha(naranjaPuedeBalde ? 1 : 0);
+  this.BotonBaldeE.setPosition(this.Balde.x, this.Balde.y - 75);
+  this.BotonBaldeJ.setPosition(this.Balde.x, this.Balde.y - 75);
+}
+
 // ---------- ACTUALIZACIONES ----------
 
 if (this.Construccion.texture.key !== "Construccion") {
@@ -765,6 +918,19 @@ if (this.Construccion.texture.key !== "Construccion") {
 
 // Actualizar texto de construcción
 this.actualizarTextoConstruccion();
+
+// Actualizar texto de mezcladora
+this.actualizarTextoMezcladora();
+
+// Mostrar textos e iconos de la mezcladora solo si un jugador está cerca
+const celesteCercaMezcladora = this.physics.overlap(this.Celeste, this.Mezcladora);
+const naranjaCercaMezcladora = this.physics.overlap(this.Naranja, this.Mezcladora);
+const mostrarMezcladoraUI = celesteCercaMezcladora || naranjaCercaMezcladora;
+
+this.iconoArena.setAlpha(mostrarMezcladoraUI ? 1 : 0);
+this.textoArena.setAlpha(mostrarMezcladoraUI ? 1 : 0);
+this.iconoGrava.setAlpha(mostrarMezcladoraUI ? 1 : 0);
+this.textoGrava.setAlpha(mostrarMezcladoraUI ? 1 : 0);
 
 // Si el jugador toca la construccion y tiene la textura en "Construccion", ajustar tamaño de jugador, si no volver a la normalidad
 [this.Celeste, this.Naranja].forEach(jugador => {
@@ -849,7 +1015,7 @@ if (this.Construccion.hitboxInternaSupNaranja) {
         this.cameras.main.height,
         0x000000,
         0.7
-      ).setDepth(4);
+      ).setDepth(7);
 
       this.add.text(
         this.cameras.main.width / 2,
@@ -862,7 +1028,7 @@ if (this.Construccion.hitboxInternaSupNaranja) {
           stroke: "#000000",
           strokeThickness: 8
         }
-      ).setOrigin(0.5).setDepth(4);
+      ).setOrigin(0.5).setDepth(7);
     }
   }
 }

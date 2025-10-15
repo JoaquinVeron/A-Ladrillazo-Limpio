@@ -30,7 +30,7 @@ configure({
   this.setTint(color);
   this.setScale(scale);
   this.setImmovable(immovable);
-  this.setDepth(2);
+  this.setDepth(5);
 
   // velocidad según dirección
   this.setVelocityY(velocidad * direction);
@@ -114,7 +114,7 @@ handleCollision(jugador) {
             color: coloresdeTexto,
             stroke: '#000000ff',
             strokeThickness: 4
-          }).setOrigin(0.5).setDepth(2);
+          }).setOrigin(0.5).setDepth(6);
 
           this.scene.tweens.add({
             targets: txt,
@@ -135,7 +135,7 @@ handleCollision(jugador) {
         const offsetY = Phaser.Math.Between(160, 200) * direccion;
         const destinoX = jugador.x + offsetX;
         const destinoY = jugador.y + offsetY;
-        ladrillo.setDepth(0);
+        ladrillo.setDepth(4);
         ladrillo.setInteractive();
         ladrillo.body.enable = false;
 
@@ -205,7 +205,7 @@ handleCollision(jugador) {
         color: coloresdeTexto,
         stroke: '#000000ff',
         strokeThickness: 4
-      }).setOrigin(0.5).setDepth(2);
+      }).setOrigin(0.5).setDepth(6);
 
       this.scene.tweens.add({
         targets: txt,

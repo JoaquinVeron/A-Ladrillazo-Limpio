@@ -4,7 +4,7 @@ constructor(scene, x, y, texture) {
   scene.add.existing(this);
   scene.physics.add.existing(this);
 
-  this.setImmovable(true).setDepth(1);
+  this.setImmovable(true).setDepth(4);
 
   // --- HITBOX personalizada según el material ---
   if (texture === "Arena" || texture === "Grava" || texture === "Ladrillos" || texture === "Mezcladora") {
@@ -73,7 +73,7 @@ jugador.llevaBalde = false;
 this.portadorBalde = null;
 this.x = jugador.x + 30;
 this.y = jugador.y + 30;
-this.setDepth(0);
+this.setDepth(4);
 console.log(`${jugador.texture.key} soltó el ${this.texture.key}`);
 }
 
@@ -146,7 +146,7 @@ levantarLadrillo(jugador) {
         jugador.x + 20,
         jugador.y + offsetY,
         "Ladrillo"
-      ).setScale(0.5).setDepth(1);
+      ).setScale(0.5).setDepth(0);
       ladrillo.portadorLadrillo = jugador;
       jugador.ladrillos.push(ladrillo);
     }
@@ -168,7 +168,7 @@ soltarLadrillo(jugador) {
     ladrillo.portadorLadrillo = null;
     ladrillo.x = jugador.x + 40;
     ladrillo.y = jugador.y + 50;
-    ladrillo.setDepth(0);
+    ladrillo.setDepth(4);
     ladrillo.setInteractive();
     ladrillo.body.enable = true;
     this.scene.physics.add.collider(ladrillo, this.scene.barreras); // <-- NUEVO
@@ -222,56 +222,74 @@ levantarLadrilloSuelo(jugador, ladrillo) {
 cargarMaquina(jugador, tecla, material){
   if (Phaser.Input.Keyboard.JustDown(tecla)){
     if (this.texture.key === "Mezcladora") {
-    if (material.texture.key === "Arena" && this.arenaCount < 2) {
-      this.arenaCount++;
-    } else if (material.texture.key === "Grava" && this.gravaCount < 1) {
-      this.gravaCount++;
+      if (material.texture.key === "Arena" && this.arenaCount < 2) {
+        this.arenaCount++;
+      } else if (material.texture.key === "Grava" && this.gravaCount < 1) {
+        this.gravaCount++;
+      }
+
+      // --- ACTUALIZAR TEXTO DE MEZCLADORA ---
+      if (this.scene.actualizarTextoMezcladora) this.scene.actualizarTextoMezcladora();
+
+      if (!(this.arenaCount === 2 && this.gravaCount === 1)) {
+        this.setTint(0xffff00);
+
+        //Volver color a la normalidad
+        this.scene.time.delayedCall(500, () => {
+          this.setTint(0xffffff);
+        });
+      }
+
+      // Vaciar balde siempre
+      this.vaciarBalde();
+
+      console.log(
+        `${jugador.texture.key} cargó la mezcladora con ${material.texture.key}. Arena: ${this.arenaCount}/2, Grava: ${this.gravaCount}/1`
+      );
+
+      // Chequear si ya tiene la receta completa
+      if (this.arenaCount === 2 && this.gravaCount === 1) { // Cantidad de baldes por material
+        this.funcionar();
+      }
     }
-
-    if (!(this.arenaCount === 2 && this.gravaCount === 1)) {
-    this.setTint(0xffff00);
-
-    //Volver color a la normalidad
-    this.scene.time.delayedCall(500, () => {
-   this.setTint(0xffffff);
-    });
-    }
-
-    // Vaciar balde siempre
-    this.vaciarBalde();
-
-    console.log(
-      `${jugador.texture.key} cargó la mezcladora con ${material.texture.key}. Arena: ${this.arenaCount}/2, Grava: ${this.gravaCount}/1`
-    );
-
-    // Chequear si ya tiene la receta completa
-    if (this.arenaCount === 2 && this.gravaCount === 1) { // Cantidad de baldes por material
-      this.funcionar();
-    }
-  }
   }
 }
 
 funcionar(){
-console.log("✅ ¡La mezcladora está funcionando!");
-this.setTint(0x00ff00);
+  console.log("✅ ¡La mezcladora está funcionando!");
+  this.setTint(0x00ff00);
 
-this.scene.time.delayedCall(3000, () => {
-  this.arenaCount = 0;
-  this.gravaCount = 0;
-  this.setTint(0xffffff);
-  this.setTexture("MezcladoraLlena");
-  if (this.Cemento) {
-    this.Cemento.destroy(); // Destruir el cemento viejo si existe
-  }
-  
-  // Crear el cemento y guardar la referencia
-  const Cemento = new Material(this.scene, this.x - 5, this.y + 150, "Cemento").setScale(0.5);
-  Cemento.usosRestantes = 3; // <-- NUEVO: contador de usos
-  this.scene.Cemento = Cemento;
-  console.log("Se generó un balde de cemento");
-  console.log("La mezcladora está lista para otro uso");
-});
+  this.scene.time.delayedCall(3000, () => {
+    this.arenaCount = 0;
+    this.gravaCount = 0;
+    this.setTint(0xffffff);
+    this.setTexture("MezcladoraLlena");
+    if (this.Cemento) {
+      this.Cemento.destroy(); // Destruir el cemento viejo si existe
+    }
+    
+    // Crear el cemento y guardar la referencia
+    const Cemento = new Material(this.scene, this.x - 5, this.y + 150, "Cemento").setScale(0.5).setDepth(4);
+    Cemento.usosRestantes = 3; // <-- NUEVO: contador de usos
+    this.scene.Cemento = Cemento;
+
+    // Crear los botones sobre el cemento
+    if (!this.scene.BotonCementoJ) {
+      this.scene.BotonCementoJ = this.scene.add.image(Cemento.x, Cemento.y - 75, "BotonJ").setDepth(6).setAlpha(0);
+    }
+    if (!this.scene.BotonCementoK) {
+      this.scene.BotonCementoK = this.scene.add.image(Cemento.x, Cemento.y - 75, "BotonK").setDepth(6).setAlpha(0);
+    }
+
+    // Actualizar posición si el cemento se mueve
+    this.scene.BotonCementoJ.x = Cemento.x;
+    this.scene.BotonCementoJ.y = Cemento.y - 75;
+    this.scene.BotonCementoK.x = Cemento.x;
+    this.scene.BotonCementoK.y = Cemento.y - 75;
+
+    console.log("Se generó un balde de cemento");
+    console.log("La mezcladora está lista para otro uso");
+  });
 }
 
 // ---------- CONSTRUCCION ----------
@@ -334,7 +352,7 @@ etapa1Construccion() {
   }
   this.scene.time.delayedCall(parpadeos * 2 * intervalo, () => {
     this.setTexture("Construccion2");
-    this.setDepth(this.depth + 2);
+    this.setDepth(2);
     this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
     console.log(" ¡Primera Construcción completada!");
     // --- SUMAR 3 MINUTOS ---
@@ -349,8 +367,8 @@ etapa2Construccion() {
   this.body.setSize(fullWidth, fullHeight - 38);
   this.body.setOffset(0, fullHeight - 326);
 
-  const paredizq = this.scene.add.image(this.x - 140, this.y + 155, "Pared").setScale(1).setDepth(2);
-  const paredder = this.scene.add.image(this.x + 140, this.y + 155, "Pared").setScale(1).setDepth(2);
+  const paredizq = this.scene.add.image(this.x - 140, this.y + 155, "Pared").setScale(1).setDepth(3);
+  const paredder = this.scene.add.image(this.x + 140, this.y + 155, "Pared").setScale(1).setDepth(3);
 
   // --- Crear hitbox superior interna para Celeste ---
   if (!this.hitboxInternaCeleste) {
@@ -363,7 +381,7 @@ etapa2Construccion() {
     this.scene.physics.add.existing(this.hitboxInternaSupCeleste);
     this.hitboxInternaSupCeleste.body.setAllowGravity(false);
     this.hitboxInternaSupCeleste.body.setImmovable(true);
-    this.hitboxInternaSupCeleste.setDepth(this.depth + 1);
+    this.hitboxInternaSupCeleste.setDepth(0);
     this.scene.physics.add.collider(this.scene.Celeste, this.hitboxInternaSupCeleste);
   }
 
@@ -378,7 +396,7 @@ etapa2Construccion() {
     this.scene.physics.add.existing(this.hitboxInfIzqCeleste);
     this.hitboxInfIzqCeleste.body.setAllowGravity(false);
     this.hitboxInfIzqCeleste.body.setImmovable(true);
-    this.hitboxInfIzqCeleste.setDepth(this.depth + 1);
+    this.hitboxInfIzqCeleste.setDepth(0);
     this.scene.physics.add.collider(this.scene.Celeste, this.hitboxInfIzqCeleste);
   }
 
@@ -393,7 +411,7 @@ etapa2Construccion() {
     this.scene.physics.add.existing(this.hitboxInfDerCeleste);
     this.hitboxInfDerCeleste.body.setAllowGravity(false);
     this.hitboxInfDerCeleste.body.setImmovable(true);
-    this.hitboxInfDerCeleste.setDepth(this.depth + 1);
+    this.hitboxInfDerCeleste.setDepth(0);
     this.scene.physics.add.collider(this.scene.Celeste, this.hitboxInfDerCeleste);
   }
 
@@ -408,7 +426,7 @@ etapa2Construccion() {
     this.scene.physics.add.existing(this.hitboxInternaSupNaranja);
     this.hitboxInternaSupNaranja.body.setAllowGravity(false);
     this.hitboxInternaSupNaranja.body.setImmovable(true);
-    this.hitboxInternaSupNaranja.setDepth(this.depth + 1);
+    this.hitboxInternaSupNaranja.setDepth(0);
     this.scene.physics.add.collider(this.scene.Naranja, this.hitboxInternaSupNaranja);
   }
 
@@ -423,7 +441,7 @@ etapa2Construccion() {
     this.scene.physics.add.existing(this.hitboxInfIzqNaranja);
     this.hitboxInfIzqNaranja.body.setAllowGravity(false);
     this.hitboxInfIzqNaranja.body.setImmovable(true);
-    this.hitboxInfIzqNaranja.setDepth(this.depth + 1);
+    this.hitboxInfIzqNaranja.setDepth(0);
     this.scene.physics.add.collider(this.scene.Naranja, this.hitboxInfIzqNaranja);
   }
 
@@ -438,7 +456,7 @@ etapa2Construccion() {
     this.scene.physics.add.existing(this.hitboxInfDerNaranja);
     this.hitboxInfDerNaranja.body.setAllowGravity(false);
     this.hitboxInfDerNaranja.body.setImmovable(true);
-    this.hitboxInfDerNaranja.setDepth(this.depth + 1);
+    this.hitboxInfDerNaranja.setDepth(0);
     this.scene.physics.add.collider(this.scene.Naranja, this.hitboxInfDerNaranja);
   }
 
@@ -453,7 +471,7 @@ etapa2Construccion() {
     this.scene.physics.add.existing(this.hitboxLateralIzq);
     this.hitboxLateralIzq.body.setAllowGravity(false);
     this.hitboxLateralIzq.body.setImmovable(true);
-    this.hitboxLateralIzq.setDepth(this.depth + 1);
+    this.hitboxLateralIzq.setDepth(0);
     // Puedes agregar colisión con ambos jugadores si lo necesitas:
     this.scene.physics.add.collider(this.scene.Celeste, this.hitboxLateralIzq);
     this.scene.physics.add.collider(this.scene.Naranja, this.hitboxLateralIzq);
@@ -469,14 +487,14 @@ etapa2Construccion() {
     this.scene.physics.add.existing(this.hitboxLateralDer);
     this.hitboxLateralDer.body.setAllowGravity(false);
     this.hitboxLateralDer.body.setImmovable(true);
-    this.hitboxLateralDer.setDepth(this.depth + 1);
+    this.hitboxLateralDer.setDepth(0);
     this.scene.physics.add.collider(this.scene.Celeste, this.hitboxLateralDer);
     this.scene.physics.add.collider(this.scene.Naranja, this.hitboxLateralDer);
   }
 
   // Cambio de textura y sonido
   this.y -= 50;
-  this.setDepth(1.5);
+  this.setDepth(3);
   this.setTexture("Construccion3");
   this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
   console.log(" ¡Segunda Construcción completada!");
@@ -512,7 +530,7 @@ update() {
   if (this.portadorBalde) {
     this.x = this.portadorBalde.x + 20;
     this.y = this.portadorBalde.y + 50;
-    this.setDepth(this.portadorBalde.depth + 1);
+    this.setDepth(this.portadorBalde.depth + 0.1);
   } else if (this.portadorLadrillo) {
     const idx = this.portadorLadrillo.ladrillos.indexOf(this);
     this.x = this.portadorLadrillo.x;
@@ -521,23 +539,23 @@ update() {
   }
 
   // --- NUEVO: depth dinámico según posición Y del jugador ---
-  // Solo para materiales que no están siendo llevados y NO sean "Construccion"
-  if ((this.texture.key !== "Construccion" && this.texture.key !== "Construccion2" && this.texture.key !== "Construccion3" && !this.portadorBalde && !this.portadorLadrillo)) {
+  // Solo para materiales que no están siendo llevados y NO sean "Construccion" ni "Balde"
+  if ((this.texture.key !== "Construccion" && this.texture.key !== "Construccion2" && this.texture.key !== "Construccion3" && !this.portadorBalde && !this.portadorLadrillo) ) {
     const jugadores = [this.scene.Celeste, this.scene.Naranja];
-    let depthBase = 1;
+    let depthBase = 4;
     for (const jugador of jugadores) {
       if (
         jugador &&
         Math.abs(jugador.x - this.x) < this.width * this.scaleX && // cerca en X
         jugador.y < this.y + 50 // jugador está por arriba del material
       ) {
-        this.setDepth(jugador.depth + 1);
+        this.setDepth(jugador.depth + 1); // profundidad mayor si un jugador está arriba
         depthBase = null;
         break;
       }
     }
     if (depthBase !== null) {
-      this.setDepth(1); // profundidad normal si ningún jugador está arriba
+      this.setDepth(depthBase); // profundidad normal si ningún jugador está arriba
     }
   }
 
@@ -551,10 +569,27 @@ update() {
       ) {
         // Si el jugador está por debajo del límite Y de la construcción
         if (jugador.y < this.y - 205) {
-          jugador.setDepth(this.depth - 1);
+          jugador.setDepth(2);
         } else {
-          jugador.setDepth(this.depth + 1);
+          jugador.setDepth(4);
         }
+      }
+    }
+  }
+
+  if (this.texture.key === "Construccion3") {
+    const celesteTocando = this.scene.physics.overlap(this.scene.Celeste, this);
+    const naranjaTocando = this.scene.physics.overlap(this.scene.Naranja, this);
+
+    // Si uno está tocando y el otro no, desactiva el collider
+    if (celesteTocando !== naranjaTocando) {
+      if (this.scene.colliderJugadores) {
+        this.scene.colliderJugadores.active = false;
+      }
+    } else {
+      // Si ambos están tocando o ambos no, activa el collider
+      if (this.scene.colliderJugadores && !this.scene.colliderJugadores.active) {
+        this.scene.colliderJugadores.active = true;
       }
     }
   }
@@ -569,9 +604,11 @@ update() {
       ) {
         // Si el jugador está por debajo del límite Y de la pared
         if (jugador.y > this.y) {
-          jugador.setDepth(1.5);
-        } else {
           jugador.setDepth(2);
+          console.log("Jugador detrás de la pared");
+        } else {
+          jugador.setDepth(4);
+          console.log("Jugador delante de la pared");
         }
       }
     }
@@ -598,23 +635,6 @@ update() {
   ) {
     this.destroy();
     console.log("Un ladrillo salió del mapa y fue destruido.");
-  }
-
-  if (this.texture.key === "Construccion3") {
-    const celesteTocando = this.scene.physics.overlap(this.scene.Celeste, this);
-    const naranjaTocando = this.scene.physics.overlap(this.scene.Naranja, this);
-
-    // Si uno está tocando y el otro no, desactiva el collider
-    if (celesteTocando !== naranjaTocando) {
-      if (this.scene.colliderJugadores) {
-        this.scene.colliderJugadores.active = false;
-      }
-    } else {
-      // Si ambos están tocando o ambos no, activa el collider
-      if (this.scene.colliderJugadores && !this.scene.colliderJugadores.active) {
-        this.scene.colliderJugadores.active = true;
-      }
-    }
   }
 }
 }
