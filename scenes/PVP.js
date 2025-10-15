@@ -20,7 +20,6 @@ export default class GamePVP extends Phaser.Scene {
     // Centro de la cámara
     const centerX = this.cameras.main.width / 2;
     const centerY = this.cameras.main.height / 2;
-    console.log("CenterX:", centerX, "CenterY:", centerY);
   
     // Teclas para interactuar
     this.eKey = this.input.keyboard.addKey('E');

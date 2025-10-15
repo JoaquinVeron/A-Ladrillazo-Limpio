@@ -5,8 +5,8 @@ export default class Preload extends Phaser.Scene {
 
   preload() {
 
-    // Definir la ruta base para los assets
-    this.load.setPath("assets");
+    // Ruta base absoluta hacia lo que Vite pone en la raíz (public/)
+    this.load.setPath('/assets');
     
     // Imagenes
     this.load.image("Calle", "Calle.png");
