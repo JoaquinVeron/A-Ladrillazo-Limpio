@@ -3,6 +3,9 @@
     { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "/main.js", "dest": "/main.js" },
+    { "src": "/style.css", "dest": "/style.css" },
+    { "src": "/public/(.*)", "dest": "/public/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
