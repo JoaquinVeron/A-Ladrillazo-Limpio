@@ -15,8 +15,8 @@ export default class Preload extends Phaser.Scene {
     this.load.image("Celeste", "Celeste.png");
     this.load.image("Naranja", "Naranja.png");
     this.load.image("Auto", "auto.png");
-    this.load.image("Camion", "Camion.png");
-    this.load.image("Camion2", "Camion2.png");
+    this.load.image("Camion", "camion.png");
+    this.load.image("Camion2", "camion2.png");
     this.load.image("Moto", "Moto.png");
     this.load.image("Arena", "Arena.png");
     this.load.image("Balde", "Balde.png");
@@ -28,9 +28,9 @@ export default class Preload extends Phaser.Scene {
     this.load.image("Carretilla", "Carretilla.png");
     this.load.image("Cemento", "Cemento.png");
     this.load.image("Coca", "Coca.png");
-    this.load.image("Construccion", "Construccion.png");
-    this.load.image("Construccion2", "Construccion2.png");
-    this.load.image("Construccion3", "Construccion3.png");
+    this.load.image("Construccion", "construccion.png");
+    this.load.image("Construccion2", "construccion2.png");
+    this.load.image("Construccion3", "construccion3.png");
     this.load.image("Cuchara", "Cuchara.png");
     this.load.image("Espatula", "Espatula.png");
     this.load.image("Grava", "Grava.png");
@@ -45,7 +45,7 @@ export default class Preload extends Phaser.Scene {
     this.load.image("Pared", "Pared.png");
     this.load.image("Pasto", "Pasto.png");
     this.load.image("Pasto2", "Pasto2.png");
-    this.load.image("PastoDetalle", "PastoDetalle.png");
+    this.load.image("PastoDetalle", "Pastodetalle.png");
     this.load.image("Sombreado", "Sombreado.png");
 
     // Sonidos
