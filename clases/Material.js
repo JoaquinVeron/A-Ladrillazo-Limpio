@@ -278,7 +278,7 @@ this.scene.time.delayedCall(3000, () => {
 
 recibirCemento(jugador) {
   if (
-    this.texture.key === "Construccion" || this.texture.key === "Construccion2" &&
+    this.texture.key === "Construccion" || this.texture.key === "Construccion2" || this.texture.key === "Construccion3" &&
     jugador.llevaBalde &&
     this.scene.Balde.lleno &&
     ["BaldeCemento"].includes(this.scene.Balde.texture.key)
@@ -298,7 +298,7 @@ recibirCemento(jugador) {
 }
 
 recibirLadrillo(jugador) {
-  if (this.texture.key === "Construccion" || this.texture.key === "Construccion2" && jugador.ladrillos.length > 0) {
+  if (this.texture.key === "Construccion" || this.texture.key === "Construccion2" || this.texture.key === "Construccion3" && jugador.ladrillos.length > 0) {
     if (this.ladrilloCount < this.ladrilloNecesario) {
       const ladrillo = jugador.ladrillos.pop();
       if (ladrillo) {
@@ -337,6 +337,8 @@ etapa1Construccion() {
     this.setDepth(this.depth + 2);
     this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
     console.log(" ¡Primera Construcción completada!");
+    // --- SUMAR 3 MINUTOS ---
+    if (this.scene.sumarTiempo) this.scene.sumarTiempo(180);
   });
 }
 
@@ -478,6 +480,8 @@ etapa2Construccion() {
   this.setTexture("Construccion3");
   this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
   console.log(" ¡Segunda Construcción completada!");
+  // --- SUMAR 5 MINUTOS ---
+  if (this.scene.sumarTiempo) this.scene.sumarTiempo(300);
 }
 
 verificarConstruccion() {

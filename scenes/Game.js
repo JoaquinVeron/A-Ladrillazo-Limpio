@@ -163,7 +163,7 @@ create() {
 
   // Funcion para obtener un delay aleatorio de spawn
   const randomDelayAuto = () => {
-    return Phaser.Math.Between(400, 500);
+    return Phaser.Math.Between(600, 800);
   }
 
   // Evento para autos y camiones
@@ -549,6 +549,14 @@ interactuarLadrillo(jugador, key) {
 }
 }
 
+sumarTiempo(segundos) {
+  this.tiempoRestante += segundos;
+  // Opcional: actualiza el texto inmediatamente
+  const minutos = Math.floor(this.tiempoRestante / 60);
+  const segundosRestantes = Math.floor(this.tiempoRestante % 60);
+  const textoFormateado = `${minutos.toString().padStart(2, "0")}:${segundosRestantes.toString().padStart(2, "0")}`;
+  if (this.textoTimer) this.textoTimer.setText(textoFormateado);
+}
 
 // ---------- MOVIMIENTO JUGADORES ----------
 moverJugador(jugador, teclas, correrKey) {
