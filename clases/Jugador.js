@@ -265,6 +265,70 @@ lanzarLadrillo() {
     // colisiones con jugadores: empujón/noqueo y siempre mostrar PUF + destruir ladrillo (UNA sola vez)
     scene.physics.add.collider(ladrillo, scene.Celeste, (l, jugador) => {
       if (l.thrower !== jugador) {
+        // --- NUEVO: soltar balde y ladrillos si el jugador es golpeado por un ladrillo ---
+        if (scene.Balde.portadorBalde === jugador) {
+          scene.Balde.soltarBalde(jugador);
+        }
+        if (jugador.ladrillos && jugador.ladrillos.length > 0) {
+          // Calcular dirección del golpe
+          const dx = jugador.x - l.x;
+          const dy = jugador.y - l.y;
+          const dist = Math.max(1, Math.hypot(dx, dy));
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          // Soltar y desparramar cada ladrillo
+          while (jugador.ladrillos.length > 0) {
+            const ladrilloSoltado = jugador.ladrillos[jugador.ladrillos.length - 1];
+            jugador.ladrillos.pop();
+            ladrilloSoltado.portadorLadrillo = null;
+            ladrilloSoltado.x = jugador.x + Phaser.Math.Between(-10, 10);
+            ladrilloSoltado.y = jugador.y + Phaser.Math.Between(-10, 10);
+            ladrilloSoltado.setDepth(2);
+            ladrilloSoltado.setRotation(0);
+
+            // Desactivar física durante el tween
+            if (ladrilloSoltado.body) {
+              ladrilloSoltado.body.enable = false;
+            }
+
+            // Calcular destino cercano en la dirección del golpe
+            const distancia = Phaser.Math.Between(80, 120);
+            const destinoX = jugador.x + nx * distancia + Phaser.Math.Between(-30, 30);
+            const destinoY = jugador.y + ny * distancia + Phaser.Math.Between(-30, 30);
+
+            scene.tweens.add({
+              targets: ladrilloSoltado,
+              x: destinoX,
+              y: destinoY,
+              angle: Phaser.Math.Between(360, 1080),
+              duration: 400,
+              ease: 'Cubic.easeOut',
+              onComplete: () => {
+                // Reactivar física y dejar el ladrillo listo para recoger
+                if (ladrilloSoltado.body) {
+                  ladrilloSoltado.body.enable = true;
+                  ladrilloSoltado.setBounce(0.35);
+                  ladrilloSoltado.setAngularVelocity(0); // <--- DETIENE GIRO
+                  ladrilloSoltado.setCollideWorldBounds(true);
+                  ladrilloSoltado.body.onWorldBounds = true;
+                }
+                // Hacer interactivo y agregar overlaps para recoger
+                ladrilloSoltado.setInteractive();
+                scene.physics.add.overlap(scene.Celeste, ladrilloSoltado, () => {
+                  const arr = scene.toca.Ladrillo.Celeste;
+                  if (!arr.includes(ladrilloSoltado)) arr.push(ladrilloSoltado);
+                }, null, scene);
+                scene.physics.add.overlap(scene.Naranja, ladrilloSoltado, () => {
+                  const arr = scene.toca.Ladrillo.Naranja;
+                  if (!arr.includes(ladrilloSoltado)) arr.push(ladrilloSoltado);
+                }, null, scene);
+              }
+            });
+          }
+          jugador.ManosOcupadas = false;
+          jugador.llevaLadrillo = false;
+        }
         aplicarNoqueo(jugador, l);
         destruirLadrilloUnaVez(l);
       }
@@ -272,6 +336,70 @@ lanzarLadrillo() {
 
     scene.physics.add.collider(ladrillo, scene.Naranja, (l, jugador) => {
       if (l.thrower !== jugador) {
+        // --- NUEVO: soltar balde y ladrillos si el jugador es golpeado por un ladrillo ---
+        if (scene.Balde.portadorBalde === jugador) {
+          scene.Balde.soltarBalde(jugador);
+        }
+        if (jugador.ladrillos && jugador.ladrillos.length > 0) {
+          // Calcular dirección del golpe
+          const dx = jugador.x - l.x;
+          const dy = jugador.y - l.y;
+          const dist = Math.max(1, Math.hypot(dx, dy));
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          // Soltar y desparramar cada ladrillo
+          while (jugador.ladrillos.length > 0) {
+            const ladrilloSoltado = jugador.ladrillos[jugador.ladrillos.length - 1];
+            jugador.ladrillos.pop();
+            ladrilloSoltado.portadorLadrillo = null;
+            ladrilloSoltado.x = jugador.x + Phaser.Math.Between(-10, 10);
+            ladrilloSoltado.y = jugador.y + Phaser.Math.Between(-10, 10);
+            ladrilloSoltado.setDepth(2);
+            ladrilloSoltado.setRotation(0);
+
+            // Desactivar física durante el tween
+            if (ladrilloSoltado.body) {
+              ladrilloSoltado.body.enable = false;
+            }
+
+            // Calcular destino cercano en la dirección del golpe
+            const distancia = Phaser.Math.Between(80, 120);
+            const destinoX = jugador.x + nx * distancia + Phaser.Math.Between(-30, 30);
+            const destinoY = jugador.y + ny * distancia + Phaser.Math.Between(-30, 30);
+
+            scene.tweens.add({
+              targets: ladrilloSoltado,
+              x: destinoX,
+              y: destinoY,
+              angle: Phaser.Math.Between(360, 1080),
+              duration: 400,
+              ease: 'Cubic.easeOut',
+              onComplete: () => {
+                // Reactivar física y dejar el ladrillo listo para recoger
+                if (ladrilloSoltado.body) {
+                  ladrilloSoltado.body.enable = true;
+                  ladrilloSoltado.setBounce(0.35);
+                  ladrilloSoltado.setAngularVelocity(0); // <--- DETIENE GIRO
+                  ladrilloSoltado.setCollideWorldBounds(true);
+                  ladrilloSoltado.body.onWorldBounds = true;
+                }
+                // Hacer interactivo y agregar overlaps para recoger
+                ladrilloSoltado.setInteractive();
+                scene.physics.add.overlap(scene.Celeste, ladrilloSoltado, () => {
+                  const arr = scene.toca.Ladrillo.Celeste;
+                  if (!arr.includes(ladrilloSoltado)) arr.push(ladrilloSoltado);
+                }, null, scene);
+                scene.physics.add.overlap(scene.Naranja, ladrilloSoltado, () => {
+                  const arr = scene.toca.Ladrillo.Naranja;
+                  if (!arr.includes(ladrilloSoltado)) arr.push(ladrilloSoltado);
+                }, null, scene);
+              }
+            });
+          }
+          jugador.ManosOcupadas = false;
+          jugador.llevaLadrillo = false;
+        }
         aplicarNoqueo(jugador, l);
         destruirLadrilloUnaVez(l);
       }
