@@ -5,6 +5,9 @@
   "routes": [
     { "src": "/main.js", "dest": "/main.js" },
     { "src": "/style.css", "dest": "/style.css" },
+    { "src": "/clases/(.*)", "dest": "/clases/$1" },
+    { "src": "/scenes/(.*)", "dest": "/scenes/$1" },
+    { "src": "/system/(.*)", "dest": "/system/$1" },
     { "src": "/public/(.*)", "dest": "/public/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
