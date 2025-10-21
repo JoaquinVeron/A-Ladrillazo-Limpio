@@ -67,17 +67,13 @@ handleCollision(jugador) {
 
     jugador.Intangible = true;
     jugador.Aturdido = true;
-
-    const coloresdeTexto = [
-      '#ffffff',
-      //'#ff0000ff',
-      //'#ff6600ff',
-      //'#ffff00ff',
-    ];
-
-    this.scene.cameras.main.shake(100, 0.005);
-
     let ladrilloRoto = false;
+
+    // Sacudir camara
+    this.scene.cameras.main.shake(
+      100, //Duracion
+      0.01 //Intensidad
+    );
 
     // --- Soltar y dispersar ladrillos si tiene ---
     if (jugador.ladrillos && jugador.ladrillos.length > 0) {
@@ -108,21 +104,20 @@ handleCollision(jugador) {
 
           this.scene.ultimaFraseRoto = fraseRoto;
 
-          const txt = this.scene.add.text(ladrillo.x, ladrillo.y - 50, fraseRoto, {
-            fontFamily: 'ActionComicsBlack',
-            fontSize: '24px',
-            color: coloresdeTexto,
-            stroke: '#000000ff',
-            strokeThickness: 4
-          }).setOrigin(0.5).setDepth(6);
-
-          this.scene.tweens.add({
-            targets: txt,
-            y: txt.y - 100,
-            alpha: 0,
-            duration: 1500,
-            onComplete: () => txt.destroy()
-          });
+          // Delegar texto al UIManager
+          if (this.scene.ui && typeof this.scene.ui.showFloatingText === 'function') {
+            this.scene.ui.showFloatingText(ladrillo.x, ladrillo.y - 50, fraseRoto);
+          } else {
+            // fallback local si UIManager no existe
+            const txt = this.scene.add.text(ladrillo.x, ladrillo.y - 50, fraseRoto, {
+              fontFamily: 'ActionComicsBlack',
+              fontSize: '24px',
+              color: '#ffffffff',
+              stroke: '#000000ff',
+              strokeThickness: 4
+            }).setOrigin(0.5).setDepth(6);
+            this.scene.tweens.add({ targets: txt, y: txt.y - 100, alpha: 0, duration: 1500, onComplete: () => txt.destroy() });
+          }
 
           ladrillo.destroy();
           ladrilloRoto = true;
@@ -185,8 +180,8 @@ handleCollision(jugador) {
         "AUCH!",
         "NOOO!",
         "LAPU!",
-        "OTRA VEZ?!",
         "CUIDADO!",
+        "OTRA VEZ?!",
         "ESE DOLIÓ!",
         "MIRA POR DONDE MANEJAS",
         "A DONDE REGALAN EL CARNET?"
@@ -199,21 +194,20 @@ handleCollision(jugador) {
 
       this.scene.ultimaFraseChoque = frase;
 
-      const txt = this.scene.add.text(jugador.x, jugador.y - 100, frase, {
-        fontFamily: 'ActionComicsBlack',
-        fontSize: '24px',
-        color: coloresdeTexto,
-        stroke: '#000000ff',
-        strokeThickness: 4
-      }).setOrigin(0.5).setDepth(6);
-
-      this.scene.tweens.add({
-        targets: txt,
-        y: txt.y - 100,
-        alpha: 0,
-        duration: 1500,
-        onComplete: () => txt.destroy()
-      });
+      // Delegar al UIManager
+      if (this.scene.ui && typeof this.scene.ui.showFloatingText === 'function') {
+        this.scene.ui.showFloatingText(jugador.x, jugador.y - 100, frase);
+      } else {
+        // fallback local
+        const txt = this.scene.add.text(jugador.x, jugador.y - 100, frase, {
+          fontFamily: 'ActionComicsBlack',
+          fontSize: '24px',
+          color: '#ffffffff',
+          stroke: '#000000ff',
+          strokeThickness: 4
+        }).setOrigin(0.5).setDepth(6);
+        this.scene.tweens.add({ targets: txt, y: txt.y - 100, alpha: 0, duration: 1500, onComplete: () => txt.destroy() });
+      }
     }
 
     // --- El resto del código de parpadeo, timers, etc. VA SIEMPRE ---
@@ -259,4 +253,144 @@ handleCollision(jugador) {
     });
   }
 }
+
+// Métodos estáticos para crear spawners desde la escena
+static createAutoSpawner({
+  scene,
+  group,
+  centerX,
+  centerY,
+  CalleIZQCenter,
+  CalleDERCenter,
+  spawnFn = (scene, group, x, y, key, opts) => scene.spawnVehicle(group, x, y, key, opts)
+}) {
+  const posVeh = [
+    { x: CalleIZQCenter - 80, y: -100 },
+    { x: CalleIZQCenter + 80, y: -100 },
+    { x: CalleDERCenter - 80, y: 1180 },
+    { x: CalleDERCenter + 80, y: 1180 },
+  ];
+
+  const randomColor = () => {
+    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
+  const randomDelayAuto = () => Phaser.Math.Between(600, 800);
+
+  scene.time.addEvent({
+    delay: randomDelayAuto(),
+    loop: true,
+    callback: () => {
+      let { x, y } = Phaser.Utils.Array.GetRandom(posVeh);
+      const direction = y > centerY ? -1 : 1;
+      let color = randomColor();
+
+      // check para evitar spawns muy juntos
+      const distanciaMinima = 450;
+      let puedeGenerar = true;
+      group.getChildren().forEach(veh => {
+        if (
+          Math.abs(veh.x - x) < 10 &&
+          ((direction === 1 && veh.y < 200) || (direction === -1 && veh.y > 900)) &&
+          Math.abs(veh.y - y) < distanciaMinima
+        ) {
+          puedeGenerar = false;
+        }
+      });
+      if (!puedeGenerar) return;
+
+      const tipos = ["Auto", "Auto", "Auto","Auto", "Auto","Auto", "Auto", "Camion"];
+      let tipo = Phaser.Utils.Array.GetRandom(tipos);
+
+      let velocidad = 600;
+      let scale = 0.25;
+
+      let texturaCamion = "Camion";
+      if (tipo === "Camion") {
+        velocidad = 550;
+        color = 0xffffff;
+        scale = 0.35;
+        if (direction === 1) y -= 60; else y += 60;
+        if (x > centerX) texturaCamion = "Camion2";
+      }
+
+      const texturaFinal = tipo === "Camion" ? texturaCamion : tipo;
+
+      spawnFn(scene, group, x, y, texturaFinal, {
+        velocidad,
+        color,
+        direction,
+        scale,
+        immovable: true
+      });
+    }
+  });
+}
+
+static createMotoSpawner({
+  scene,
+  group,
+  centerY,
+  CalleIZQCenter,
+  CalleDERCenter,
+  spawnFn = (scene, group, x, y, key, opts) => scene.spawnVehicle(group, x, y, key, opts)
+}) {
+  const posMotos = [
+    { x: CalleIZQCenter, y: -100 },
+    { x: CalleDERCenter, y: 1180 },
+  ];
+
+  const randomDelayMoto = () => Phaser.Math.Between(2000, 8000);
+
+  scene.time.addEvent({
+    delay: randomDelayMoto(),
+    loop: true,
+    callback: () => {
+      const { x, y } = Phaser.Utils.Array.GetRandom(posMotos);
+      const direction = y > centerY ? -1 : 1;
+      const velocidad = 1000;
+
+      spawnFn(scene, group, x, y, "Moto", {
+        velocidad,
+        direction,
+        scale: 0.25,
+        size: { width: 200, height: 350 },
+        immovable: true
+      });
+
+      if (Phaser.Math.Between(1, 5) === 1) {
+        scene.sound.play("RuidoMoto", { volume: 1 });
+      }
+    }
+  });
+}
+
+static registerColliders({ scene, autosGroup, motosGroup, jugadoresGroup, balde }) {
+    // overlap autos <-> jugadores
+    scene.physics.add.overlap(
+      autosGroup,
+      jugadoresGroup,
+      (veh, jugador) => {
+        veh.handleCollision(jugador);
+        const b = balde || scene.Balde;
+        if (b && b.portadorBalde === jugador) b.soltarBalde(jugador);
+      },
+      (veh, jugador) => !jugador.Intangible,
+      scene
+    );
+
+    // overlap motos <-> jugadores
+    scene.physics.add.overlap(
+      motosGroup,
+      jugadoresGroup,
+      (veh, jugador) => {
+        veh.handleCollision(jugador);
+        const b = balde || scene.Balde;
+        if (b && b.portadorBalde === jugador) b.soltarBalde(jugador);
+      },
+      (veh, jugador) => !jugador.Intangible,
+      scene
+    );
+  }
 }

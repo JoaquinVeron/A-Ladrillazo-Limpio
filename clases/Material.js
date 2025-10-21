@@ -23,6 +23,7 @@ constructor(scene, x, y, texture) {
       0 // invisible
     );
     scene.physics.add.existing(this.hitboxInterna, true); // true = estático
+    scene.physics.add.collider(scene.jugadores, this.hitboxInterna);
   }
 
   this.portadorBalde = null;
@@ -46,7 +47,7 @@ constructor(scene, x, y, texture) {
 }
 
 // ---------- BALDE ----------
-interactuarBalde(jugador, tecla) {
+interactuarBalde(jugador) {
   // Solo permite levantar si hay overlap y condiciones correctas
   if (
     this.scene.physics.overlap(jugador, this) &&
@@ -85,27 +86,21 @@ if (Phaser.Input.Keyboard.JustDown(tecla)) {
       this.setTexture("BaldeArena");
       this.scene.sound.play("Arena", {rate: 3});
       this.lleno = true;
-      console.log(`${jugador.texture.key} llenó el balde con arena`);
     } else if (material.texture.key === "Grava") { //Llena el balde de Grava
       this.setTexture("BaldeGrava");
       this.scene.sound.play("RecGrava", {volume: 3});
       this.lleno = true;
-      console.log(`${jugador.texture.key} llenó el balde con grava`);
     } else if (material.texture.key === "Cemento") { //Llena el balde de Cemento
       // --- NUEVO: solo si hay usos restantes ---
       if (material.usosRestantes > 0) {
         this.setTexture("BaldeCemento");
         this.lleno = true;
         material.usosRestantes--;
-        console.log(`${jugador.texture.key} llenó el balde con cemento. Usos restantes: ${material.usosRestantes}`);
         if (material.usosRestantes <= 0) {
           material.destroy();
           this.scene.Mezcladora.setTexture("Mezcladora");
           this.scene.Cemento = null;
-          console.log("El cemento se ha agotado y desaparece.");
         }
-      } else {
-        console.log("¡No queda más cemento!");
       }
     }
   }
@@ -356,7 +351,7 @@ etapa1Construccion() {
     this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
     console.log(" ¡Primera Construcción completada!");
     // --- SUMAR 3 MINUTOS ---
-    if (this.scene.sumarTiempo) this.scene.sumarTiempo(180);
+    if (this.scene.sumarTiempo) this.scene.sumarTiempo(90);
   });
 }
 
@@ -499,7 +494,30 @@ etapa2Construccion() {
   this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
   console.log(" ¡Segunda Construcción completada!");
   // --- SUMAR 5 MINUTOS ---
-  if (this.scene.sumarTiempo) this.scene.sumarTiempo(300);
+  if (this.scene.sumarTiempo) this.scene.sumarTiempo(120);
+}
+
+etapa3Construccion() {
+  // Array de construcciones posibles
+  this.Construccion4 = ["Construccion4Blanca", "Construccion4Amarilla"];
+  this.y -= 55;
+  this.setTexture(Phaser.Utils.Array.GetRandom(this.Construccion4));
+  // Destruir hitbox anteriores
+  if (this.hitboxInternaSupCeleste) this.hitboxInternaSupCeleste.destroy();
+  if (this.hitboxInfIzqCeleste) this.hitboxInfIzqCeleste.destroy();
+  if (this.hitboxInfDerCeleste) this.hitboxInfDerCeleste.destroy();
+  if (this.hitboxInternaSupNaranja) this.hitboxInternaSupNaranja.destroy();
+  if (this.hitboxInfIzqNaranja) this.hitboxInfIzqNaranja.destroy();
+  if (this.hitboxInfDerNaranja) this.hitboxInfDerNaranja.destroy();
+  if (this.hitboxLateralIzq) this.hitboxLateralIzq.destroy();
+  if (this.hitboxLateralDer) this.hitboxLateralDer.destroy();
+  
+  //Destruir paredes
+  if (this.paredizq) this.paredizq.destroy();
+  if (this.paredder) this.paredder.destroy();
+
+  // winCondition true
+  this.scene.winCondition = true;
 }
 
 verificarConstruccion() {
@@ -508,6 +526,9 @@ verificarConstruccion() {
       this.etapa1Construccion();
     } else if (this.texture.key === "Construccion2") {
       this.etapa2Construccion();
+    } else if (this.texture.key === "Construccion3") {
+      this.etapa3Construccion();
+      console.log("🏗️ ¡Construcción completa!");
     }
 
     // Aumenta los requerimientos para la próxima vez (entre 1 y 2)
@@ -540,7 +561,7 @@ update() {
 
   // --- NUEVO: depth dinámico según posición Y del jugador ---
   // Solo para materiales que no están siendo llevados y NO sean "Construccion" ni "Balde"
-  if ((this.texture.key !== "Construccion" && this.texture.key !== "Construccion2" && this.texture.key !== "Construccion3" && !this.portadorBalde && !this.portadorLadrillo) ) {
+  if ((this.texture.key !== "Construccion" && this.texture.key !== "Construccion2" && this.texture.key !== "Construccion3" && this.texture.key !== "Construccion4" && !this.portadorBalde && !this.portadorLadrillo) ) {
     const jugadores = [this.scene.Celeste, this.scene.Naranja];
     let depthBase = 4;
     for (const jugador of jugadores) {

@@ -1,6 +1,8 @@
 import Preload from "/scenes/Preload.js";
 import Game from "/scenes/Game.js";
-import GamePVP from "/scenes/PVP.js";
+import HUD from "/clases/HUDCoop.js";
+import GameVersus from "./scenes/Versus.js";
+import Ajustes from "./scenes/Ajustes.js";
 
 
 const config = {
@@ -19,10 +21,10 @@ const config = {
   physics: {
     default: "arcade",
     arcade: {
-      debug: false,
+    debug: false,
     },
   },
-  scene: [Preload, Game, GamePVP], 
+  scene: [Preload, Game, GameVersus, Ajustes, HUD],
 };
 
 // Espera a que la fuente esté cargada antes de crear el juego

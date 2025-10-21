@@ -19,6 +19,189 @@ constructor(scene, x, y, texture) {
   this.vaciarTimer = null;
 }
 
+Mover(teclas, correrKey) {
+    const scene = this.scene;
+    const base = this.velocidadBase;
+    let speed = base;
+
+    // 1. Si lleva el balde lleno, velocidad fija 150
+    if (this.llevaBalde && scene.Balde && scene.Balde.lleno) {
+      speed = 150;
+    }
+    // 2. Si tiene ladrillos, reducir por ladrillo
+    else if (this.ladrillos && this.ladrillos.length > 0) {
+      speed = this.velocidadBase - 45 * this.ladrillos.length;
+      if (speed < 60) speed = 60;
+    }
+
+    // --- Si el jugador está apuntando, mover la mira (IGNORAR SHIFT) ---
+    if (this.aiming) {
+      if (!this.aimCursor || !this.aimCursor.scene) {
+        const texturaMira = (this.texture && this.texture.key === "Naranja") ? "MiraNaranja" : "MiraCeleste";
+        this.aimCursor = scene.add.image(this.x + 80, this.y, texturaMira)
+          .setScale(0.25)
+          .setDepth(6)
+          .setAlpha(0.95);
+      }
+
+      // movimiento de la mira con la misma velocidad base (NO afecta SHIFT)
+      const aimSpeed = 1000;
+      let moveX = 0, moveY = 0;
+      if (teclas.izq.isDown) moveX = -aimSpeed;
+      else if (teclas.der.isDown) moveX = aimSpeed;
+      if (teclas.arriba.isDown) moveY = -aimSpeed;
+      else if (teclas.abajo.isDown) moveY = aimSpeed;
+
+      const delta = (scene.game && scene.game.loop && scene.game.loop.delta) ? scene.game.loop.delta / 1000 : 0.016;
+      this.aimCursor.x += moveX * delta;
+      this.aimCursor.y += moveY * delta;
+
+      const cam = scene.cameras.main;
+      const minX = cam.scrollX + 20;
+      const maxX = cam.scrollX + cam.displayWidth - 20;
+      const minY = cam.scrollY + 20;
+      const maxY = cam.scrollY + cam.displayHeight - 20;
+      this.aimCursor.x = Phaser.Math.Clamp(this.aimCursor.x, minX, maxX);
+      this.aimCursor.y = Phaser.Math.Clamp(this.aimCursor.y, minY, maxY);
+
+      // jugador completamente quieto mientras apunta
+      this.setVelocity(0, 0);
+      return;
+    }
+
+    // Movimiento normal del jugador (SHIFT aumenta velocidad)
+    if (!this.Aturdido) {
+      let velX = 0, velY = 0;
+
+      if (teclas.izq.isDown) {
+        velX = -speed;
+        this.setFlipX(false);
+      } else if (teclas.der.isDown) {
+        velX = speed;
+        this.setFlipX(true);
+      }
+
+      if (teclas.arriba.isDown) {
+        velY = -speed;
+      } else if (teclas.abajo.isDown) {
+        velY = speed;
+      }
+
+      // SHIFT (o correrKey) solo afecta al jugador, no a la mira
+      if (correrKey && correrKey.isDown) {
+        velX *= 1.5;
+        velY *= 1.5;
+      }
+
+      this.setVelocityX(velX);
+      this.setVelocityY(velY);
+    } else {
+      this.setVelocity(0);
+    }
+}
+
+interactuar(tecla) {
+    // No permitir interacciones mientras apunta
+    if (this.aiming) return;
+
+    if (Phaser.Input.Keyboard.JustDown(tecla)) {
+      const scene = this.scene;
+
+      // Balde
+      if (scene.physics.overlap(this, scene.Balde)) {
+        scene.Balde.interactuarBalde(this, tecla);
+      }
+      // Pila de ladrillos
+      else if (
+        scene.physics.overlap(this, scene.Ladrillos) &&
+        this.ladrillos.length < 3 &&
+        !this.Aturdido &&
+        !this.ManosOcupadas
+      ) {
+        scene.Ladrillos.levantarLadrillo(this);
+      }
+      // Ladrillo individual en el suelo
+      else if (
+        scene.toca &&
+        scene.toca.Ladrillo &&
+        scene.toca.Ladrillo[this.texture.key] &&
+        scene.toca.Ladrillo[this.texture.key].length > 0 &&
+        this.ladrillos.length < 3 &&
+        !this.Aturdido
+      ) {
+        const ladrillo = scene.toca.Ladrillo[this.texture.key][0];
+        ladrillo.levantarLadrilloSuelo(this, ladrillo);
+      }
+      // Soltar ladrillo si no está tocando la pila
+      else if (
+        !scene.physics.overlap(this, scene.Ladrillos) &&
+        this.ladrillos.length > 0
+      ) {
+        this.ladrillos[this.ladrillos.length - 1].soltarLadrillo(this);
+      }
+    }
+}
+
+interactuarConstruccion(tecla) {
+    if (this.aiming) return;
+    if (!Phaser.Input.Keyboard.JustDown(tecla)) return;
+    const scene = this.scene;
+
+    if (
+      scene.physics.overlap(this, scene.Construccion) &&
+      this.llevaBalde &&
+      scene.Balde.lleno &&
+      scene.Balde.texture.key === "BaldeCemento"
+    ) {
+      scene.Construccion.recibirCemento(this);
+    }
+    else if (
+      scene.physics.overlap(this, scene.Construccion) &&
+      this.ladrillos.length > 0
+    ) {
+      scene.Construccion.recibirLadrillo(this);
+    }
+}
+
+interactuarMaterial(tecla, material) {
+    if (this.aiming) return;
+    const scene = this.scene;
+    if (
+      scene.physics.overlap(this, material) &&
+      this.llevaBalde
+    ) {
+      scene.Balde.llenarBalde(this, tecla, material);
+    }
+}
+
+interactuarMezcladora(tecla) {
+    if (this.aiming) return;
+    const scene = this.scene;
+    if (
+      scene.physics.overlap(this, scene.Mezcladora) &&
+      this.llevaBalde
+    ) {
+      if (scene.Balde.texture.key === "BaldeArena") {
+        scene.Mezcladora.cargarMaquina(this, tecla, scene.Arena);
+      } else if (scene.Balde.texture.key === "BaldeGrava") {
+        scene.Mezcladora.cargarMaquina(this, tecla, scene.Grava);
+      }
+    }
+}
+
+interactuarLadrillo(tecla) {
+    const scene = this.scene;
+    if (scene.physics.overlap(this, scene.Construccion)) return;
+
+    if (Phaser.Input.Keyboard.JustDown(tecla)) {
+      if (this.aiming) {
+        this.lanzarLadrillo();
+      } else {
+        this.startAiming();
+      }
+    }
+}
+
 startAiming() {
   // Si no hay ladrillos o ya está en modo apuntado, nada que hacer
   if (!this.ladrillos || this.ladrillos.length === 0) return;
@@ -75,6 +258,7 @@ lanzarLadrillo() {
       return;
     }
 
+    // Sacar el último ladrillo del array
     const ladrillo = this.ladrillos.pop();
     if (!ladrillo) {
       this.cancelAiming();
@@ -262,11 +446,13 @@ lanzarLadrillo() {
       });
     }
 
-    scene.physics.add.collider(ladrillo, scene.Naranja, (l, jugador) => {
-      if (l.thrower !== jugador) {
-        // --- NUEVO: soltar balde y ladrillos si el jugador es golpeado por un ladrillo ---
-        if (scene.Balde.portadorBalde === jugador) {
-          scene.Balde.soltarBalde(jugador);
+    const jugadores = [scene.Celeste, scene.Naranja];
+    jugadores.forEach(jugador => {
+      scene.physics.add.collider(ladrillo, jugador, (l, jugador) => {
+        if (l.thrower !== jugador) {
+          // --- NUEVO: soltar balde y ladrillos si el jugador es golpeado por un ladrillo ---
+          if (scene.Balde.portadorBalde === jugador) {
+            scene.Balde.soltarBalde(jugador);
         }
         if (jugador.ladrillos && jugador.ladrillos.length > 0) {
           // Calcular dirección del golpe
@@ -283,7 +469,7 @@ lanzarLadrillo() {
             ladrilloSoltado.portadorLadrillo = null;
             ladrilloSoltado.x = jugador.x + Phaser.Math.Between(-10, 10);
             ladrilloSoltado.y = jugador.y + Phaser.Math.Between(-10, 10);
-            ladrilloSoltado.setDepth(6);
+            ladrilloSoltado.setDepth(1);
             ladrilloSoltado.setRotation(0);
 
             // Desactivar física durante el tween
@@ -332,7 +518,9 @@ lanzarLadrillo() {
         destruirLadrilloUnaVez(l);
       }
     }, null, scene);
+    });
 
+    // cancelar modo apuntado tras lanzar
     this.cancelAiming();
-  }
+}
 }
