@@ -9,13 +9,21 @@ export default class HUD extends Phaser.Scene {
   }
 
   getTargetScene() {
+    // Si nos pasaron explícitamente la key, intentar obtenerla directamente
     if (this.targetSceneKey) {
       const s = this.scene.get(this.targetSceneKey);
       if (s) return s;
     }
+
+    // Fallback: buscar entre las escenas cargadas una que parezca ser la escena de juego
     const mgrScenes = (this.scene.manager && this.scene.manager.scenes) ? this.scene.manager.scenes : [];
     for (const s of mgrScenes) {
       if (!s) continue;
+      // varias formas de obtener la key de la escena según la versión/organización
+      const key = (s.sys && s.sys.settings && s.sys.settings.key) || (s.scene && s.scene.key) || s.key || null;
+      // Priorizar los keys explícitos si coinciden con los modos que conocemos
+      if (key === "game" || key === "gameversus") return s;
+      // Si tiene propiedades típicas de las escenas de juego, devolverla
       if (s.Celeste || s.Naranja || s.Construccion || s.Balde || s.Mezcladora) return s;
     }
     return null;
@@ -439,8 +447,18 @@ export default class HUD extends Phaser.Scene {
       gs.winCondition = false;
       if (gs) gs.gameOver = true;
 
-      this.add.text(this.centerX, this.centerY - 150, "VICTORIA", {
-        fontFamily: "ActionComicsBlack", fontSize: "80px", color: "#00ff00", stroke: "#000000", strokeThickness: 8
+      // Determinar texto y color según ganador (si existe)
+      const winner = gs.winner || null;
+      let titulo = "VICTORIA";
+      let color = "#00ff00";
+      if (winner) {
+        titulo = `VICTORIA - ${winner.toUpperCase()}`;
+        if (winner === "Celeste") color = "#00bfff"; // azul claro
+        else if (winner === "Naranja") color = "#ff8c00"; // naranja
+      }
+
+      this.add.text(this.centerX, this.centerY - 150, titulo, {
+        fontFamily: "ActionComicsBlack", fontSize: "80px", color: color, stroke: "#000000", strokeThickness: 8
       }).setOrigin(0.5).setDepth(7);
 
       const reiniciarButton = this.add.text(this.centerX, this.centerY + 50, 'REINICIAR', {
@@ -448,6 +466,8 @@ export default class HUD extends Phaser.Scene {
       }).setOrigin(0.5).setInteractive();
 
       reiniciarButton.on('pointerdown', () => {
+        const targetSceneKey = (gs && gs.sys && gs.sys.settings && gs.sys.settings.key) || this.targetSceneKey || (this.isVersus ? 'gameversus' : 'game');
+
         this.tweens.add({
           targets: this.PantallaNegra,
           y: 540,
@@ -455,7 +475,12 @@ export default class HUD extends Phaser.Scene {
           ease: 'Power2',
           onComplete: () => {
             this.time.delayedCall(500, () => {
-              this.scene.start('game');
+              // Parar HUD primero para evitar conflictos de input/usuarios duplicados
+              try { this.scene.stop('HUD'); } catch (e) {}
+              // Asegurar que la escena objetivo esté parada antes de arrancarla
+              try { this.scene.stop(targetSceneKey); } catch (e) {}
+              // Iniciar la escena objetivo (su create() debe volver a lanzar el HUD)
+              this.scene.start(targetSceneKey);
             });
           }
         });
@@ -466,6 +491,7 @@ export default class HUD extends Phaser.Scene {
       }).setOrigin(0.5).setInteractive();
 
       menuButton.on('pointerdown', () => {
+        const targetSceneKey = (gs && gs.sys && gs.sys.settings && gs.sys.settings.key) || this.targetSceneKey || (this.isVersus ? 'gameversus' : 'game');
         this.tweens.add({
           targets: this.PantallaNegra,
           y: 540,
@@ -473,7 +499,7 @@ export default class HUD extends Phaser.Scene {
           ease: 'Power2',
           onComplete: () => {
             this.time.delayedCall(500, () => {
-              this.scene.stop('game');
+              try { this.scene.stop(targetSceneKey); } catch (e) {}
               this.scene.start('preload');
             });
           }

@@ -291,7 +291,7 @@ funcionar(){
 
 recibirCemento(jugador) {
   if (
-    this.texture.key === "Construccion" || this.texture.key === "Construccion2" || this.texture.key === "Construccion3" &&
+    this.texture.key === "Construccion" || this.texture.key === "Construccion2" || this.texture.key === "Construccion3" || this.texture.key === "Construccion3Versus" &&
     jugador.llevaBalde &&
     this.scene.Balde.lleno &&
     ["BaldeCemento"].includes(this.scene.Balde.texture.key)
@@ -311,7 +311,7 @@ recibirCemento(jugador) {
 }
 
 recibirLadrillo(jugador) {
-  if (this.texture.key === "Construccion" || this.texture.key === "Construccion2" || this.texture.key === "Construccion3" && jugador.ladrillos.length > 0) {
+  if (this.texture.key === "Construccion" || this.texture.key === "Construccion2" || this.texture.key === "Construccion3" || this.texture.key === "Construccion3Versus" && jugador.ladrillos.length > 0) {
     if (this.ladrilloCount < this.ladrilloNecesario) {
       const ladrillo = jugador.ladrillos.pop();
       if (ladrillo) {
@@ -356,6 +356,21 @@ etapa1Construccion() {
 }
 
 etapa2Construccion() {
+  // Si estamos en modo Versus (scene key "gameversus") sólo cambiar textura y sonido,
+  // sin crear hitboxes ni imágenes de paredes.
+  const isVersus = this.scene && this.scene.scene && this.scene.scene.key === "gameversus";
+  if (isVersus) {
+    this.y -= 50;
+    this.setDepth(3);
+    this.setTexture("Construccion3Versus");
+    this.scene.sound.play("SonidoConstruccion", { volume: 0.75, rate: 2 });
+    console.log(" ¡Primera Construcción (Versus) completada! (sin hitboxes ni paredes)");
+    // --- SUMAR 5 MINUTOS ---
+    if (this.scene.sumarTiempo) this.scene.sumarTiempo(120);
+    return;
+  }
+
+  // --- comportamiento normal (no-Versus) ---
   // Ajustar hitbox al nuevo sprite
   const fullWidth = this.width * this.scaleX;
   const fullHeight = this.height * this.scaleY;
@@ -522,8 +537,23 @@ etapa3Construccion() {
 
 verificarConstruccion() {
   if (this.cementoCount >= this.cementoNecesario && this.ladrilloCount >= this.ladrilloNecesario) {
+    // Si estamos en Versus, marcar el ganador según la construcción que completó
+    try {
+      const isVersusScene = this.scene && this.scene.scene && this.scene.scene.key === "gameversus";
+      if (isVersusScene) {
+        if (this.scene.ConstruccionCeleste === this) {
+          this.scene.winner = "Celeste";
+        } else if (this.scene.ConstruccionNaranja === this) {
+          this.scene.winner = "Naranja";
+        }
+      }
+    } catch (e) {
+      // no bloquear si algo inesperado ocurre
+      console.warn("Verificar ganador: ", e);
+    }
+
     if (this.texture.key === "Construccion") {
-      this.etapa1Construccion();
+      this.etapa3Construccion();
     } else if (this.texture.key === "Construccion2") {
       this.etapa2Construccion();
     } else if (this.texture.key === "Construccion3") {

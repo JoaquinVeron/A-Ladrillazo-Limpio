@@ -142,24 +142,28 @@ interactuar(tecla) {
     }
 }
 
-interactuarConstruccion(tecla) {
+interactuarConstruccion(tecla, construccion) {
     if (this.aiming) return;
     if (!Phaser.Input.Keyboard.JustDown(tecla)) return;
     const scene = this.scene;
 
+    // Determinar la construcción objetivo (prioriza el parámetro, si no usa cualquiera existente en la escena)
+    const target = construccion || scene.Construccion || scene.ConstruccionCeleste || scene.ConstruccionNaranja;
+    if (!target) return;
+
     if (
-      scene.physics.overlap(this, scene.Construccion) &&
+      scene.physics.overlap(this, target) &&
       this.llevaBalde &&
       scene.Balde.lleno &&
       scene.Balde.texture.key === "BaldeCemento"
     ) {
-      scene.Construccion.recibirCemento(this);
+      target.recibirCemento(this);
     }
     else if (
-      scene.physics.overlap(this, scene.Construccion) &&
+      scene.physics.overlap(this, target) &&
       this.ladrillos.length > 0
     ) {
-      scene.Construccion.recibirLadrillo(this);
+      target.recibirLadrillo(this);
     }
 }
 
@@ -191,7 +195,13 @@ interactuarMezcladora(tecla) {
 
 interactuarLadrillo(tecla) {
     const scene = this.scene;
-    if (scene.physics.overlap(this, scene.Construccion)) return;
+    // Si está sobre CUALQUIERA de las construcciones, no iniciar apuntado
+    const tocandoConstruccion = (
+      (scene.Construccion && scene.physics.overlap(this, scene.Construccion)) ||
+      (scene.ConstruccionCeleste && scene.physics.overlap(this, scene.ConstruccionCeleste)) ||
+      (scene.ConstruccionNaranja && scene.physics.overlap(this, scene.ConstruccionNaranja))
+    );
+    if (tocandoConstruccion) return;
 
     if (Phaser.Input.Keyboard.JustDown(tecla)) {
       if (this.aiming) {
@@ -245,17 +255,20 @@ cancelAiming() {
 lanzarLadrillo() {
     const scene = this.scene;
 
-    // si no hay ladrillos, cancelar apuntado y salir
+    // si no hay ladrillos o ya está en modo apuntado, salir
     if (!this.ladrillos || this.ladrillos.length === 0) {
       this.cancelAiming();
       return;
     }
 
-    // Si está sobre la construcción, dejar el ladrillo ahí
-    if (scene.physics.overlap(this, scene.Construccion)) {
-      scene.Construccion.recibirLadrillo(this);
-      this.cancelAiming();
-      return;
+    // Si está sobre alguna construcción, dejar el ladrillo ahí (busca la construcción correcta)
+    const construcciones = [scene.Construccion, scene.ConstruccionCeleste, scene.ConstruccionNaranja].filter(Boolean);
+    for (const cons of construcciones) {
+      if (scene.physics.overlap(this, cons)) {
+        cons.recibirLadrillo(this);
+        this.cancelAiming();
+        return;
+      }
     }
 
     // Sacar el último ladrillo del array

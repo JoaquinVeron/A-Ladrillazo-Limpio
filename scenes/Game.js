@@ -230,6 +230,13 @@ update() {
 
   // --- DETENER TODO EN GAME OVER ---
   if (this.gameOver) {
+    
+    // Detener todos los audios una única vez
+      if (!this._audioStoppedOnGameOver) {
+        try { this.sound.stopAll(); } catch (e) { console.warn("stopAll sound failed:", e); }
+        this._audioStoppedOnGameOver = true;
+      }
+
     // Detener jugadores
     this.Celeste.setVelocity(0, 0);
     this.Naranja.setVelocity(0, 0);

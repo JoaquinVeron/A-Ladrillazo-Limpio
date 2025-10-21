@@ -41,6 +41,7 @@ export default class Preload extends Phaser.Scene {
     this.load.image("Construccion", "construccion.png");
     this.load.image("Construccion2", "construccion2.png");
     this.load.image("Construccion3", "construccion3.png");
+    this.load.image("Construccion3Versus", "construccion3Versus.png");
     this.load.image("Construccion4Blanca", "construccion4Blanca.png");
     this.load.image("Construccion4Amarilla", "construccion4Amarilla.png");
     this.load.image("Cuchara", "Cuchara.png");
@@ -62,6 +63,8 @@ export default class Preload extends Phaser.Scene {
     this.load.image("Pausa", "Pausa.png");
     this.load.image("Pasto", "Pasto.png");
     this.load.image("PastoVersus", "PastoVersus.png");
+    this.load.image("PastoCeleste", "PastoCeleste.png");
+    this.load.image("PastoNaranja", "PastoNaranja.png");
     this.load.image("Pasto2", "Pasto2.png");
     this.load.image("PastoDetalle", "Pastodetalle.png");
     this.load.image("Reloj", "Reloj.png");

@@ -8,139 +8,151 @@ export default class GameVersus extends Phaser.Scene {
   }
 
   create() {
+    console.log("Versus create");
+
+    // Reinicializar flags y reactivar el world físico / input para evitar estados residuales
+    this.gameOver = false;
+    this.winCondition = false;
+    // Asegurar que el physics world esté activo
+    if (this.physics && this.physics.world) {
+      try {
+        this.physics.world.enabled = true;
+        if (typeof this.physics.world.resume === "function") this.physics.world.resume();
+      } catch (e) { console.warn("No pudo reactivar physics.world:", e); }
+    }
+
     // lanzar HUD pasando la key de esta escena
     this.scene.launch('HUD', { sceneKey: this.scene.key });
 
     // ----------- CÁMARA ----------
     
-      // Centro de la cámara
-      const centerX = this.cameras.main.width / 2;
-      const centerY = this.cameras.main.height / 2;
+    // Centro de la cámara
+    const centerX = this.cameras.main.width / 2;
+    const centerY = this.cameras.main.height / 2;
     
-      // Teclas para interactuar
-      this.eKey = this.input.keyboard.addKey('E');
-      this.fKey = this.input.keyboard.addKey('F');
-      this.jKey = this.input.keyboard.addKey('J');
-      this.kKey = this.input.keyboard.addKey('K');
-      this.lKey = this.input.keyboard.addKey('L');
-      
-      // Inicializa los cursores
-      this.cursors = this.input.keyboard.createCursorKeys();
+    // Teclas para interactuar
+    this.eKey = this.input.keyboard.addKey('E');
+    this.fKey = this.input.keyboard.addKey('F');
+    this.jKey = this.input.keyboard.addKey('J');
+    this.kKey = this.input.keyboard.addKey('K');
+    this.lKey = this.input.keyboard.addKey('L');
+    // Inicializa los cursores
+    this.cursors = this.input.keyboard.createCursorKeys();
     
-      // Limita la cámara a los bordes del mapa
-      const margenX = 0; // margen horizontal
-      const margenY = 0; // margen vertical
-      const anchoMapa = this.cameras.main.width;
-      const altoMapa = this.cameras.main.height;
-      this.anchoMapa = anchoMapa;
-      this.altoMapa = altoMapa;
-      this.cameras.main.setBounds(margenX, margenY, anchoMapa - margenX * 2, altoMapa - margenY * 2);
+    // Limita la cámara a los bordes del mapa
+    const margenX = 0; // margen horizontal
+    const margenY = 0; // margen vertical
+    const anchoMapa = this.cameras.main.width;
+    const altoMapa = this.cameras.main.height;
+    this.anchoMapa = anchoMapa;
+    this.altoMapa = altoMapa;
+    this.cameras.main.setBounds(margenX, margenY, anchoMapa - margenX * 2, altoMapa - margenY * 2);
     
-      // ----------- DETALLES ----------
+    // ----------- DETALLES ----------
     
-      // Sombreado
-      //this.add.image(centerX, centerY, "Sombreado").setDepth(4).setAlpha(0.5);
+    // Sombreado
+    //this.add.image(centerX, centerY, "Sombreado").setDepth(4).setAlpha(0.5);
     
-      // Pasto de fondo
-      this.pasto = this.add.image(centerX, centerY, "PastoVersus")
+    // Pasto de fondo
+    this.pasto = this.add.image(centerX, centerY, "PastoVersus")
       .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
       .setDepth(1);
     
-      // Pasto detalle
-      this.add.image(centerX, centerY, "PastoDetalle")
+    // Pasto detalle
+    this.add.image(centerX, centerY, "PastoDetalle")
       .setOrigin(0.5)
       .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
       .setAlpha(1)
       .setDepth(2);
     
-      // ----------- CALLES ----------
+    // ----------- CALLES ----------
       
-      //Grupo de calles
-      this.Calles = this.physics.add.group();
-      this.CalleIZQ = this.add.image(centerX - 210, centerY, "Calle").setOrigin(0.5).setDepth(1);
-      this.CalleDER = this.add.image(centerX + 210, centerY, "Calle").setOrigin(0.5).setDepth(1);
+    //Grupo de calles
+    this.Calles = this.physics.add.group();
+    this.CalleIZQ = this.add.image(centerX - 210, centerY, "Calle").setOrigin(0.5).setDepth(1);
+    this.CalleDER = this.add.image(centerX + 210, centerY, "Calle").setOrigin(0.5).setDepth(1);
     
-      const CalleIZQCenter = this.CalleIZQ.x;
-      const CalleDERCenter = this.CalleDER.x;
+    const CalleIZQCenter = this.CalleIZQ.x;
+    const CalleDERCenter = this.CalleDER.x;
     
-      // ----------- BARRERAS ----------
+    // ----------- BARRERAS ----------
     
-      // Calcula las posiciones Y de las barreras (simétricas respecto a centerY)
-      const cantidadPosiciones = 5;
-      const separacion = 216; 
-      const posicionesBarrerasY = [];
-      const offset = Math.floor(cantidadPosiciones / 2);
+    // Calcula las posiciones Y de las barreras (simétricas respecto a centerY)
+    const cantidadPosiciones = 5;
+    const separacion = 216; 
+    const posicionesBarrerasY = [];
+    const offset = Math.floor(cantidadPosiciones / 2);
     
-      for (let i = 0; i < cantidadPosiciones; i++) { // 5 posiciones
-        posicionesBarrerasY.push(centerY + (i - offset) * separacion);
-      }
+    for (let i = 0; i < cantidadPosiciones; i++) { // 5 posiciones
+      posicionesBarrerasY.push(centerY + (i - offset) * separacion);
+    }
     
-      // Elige aleatoriamente si serán 2 o 3 barreras
-      const cantidadElegida = Phaser.Math.Between(2, 3);
+    // Elige aleatoriamente si serán 2 o 3 barreras
+    const cantidadElegida = Phaser.Math.Between(2, 3);
     
-      // Selecciona posiciones aleatorias únicas
-      const posicionesElegidas = Phaser.Utils.Array.Shuffle(posicionesBarrerasY).slice(0, cantidadElegida);
+    // Selecciona posiciones aleatorias únicas
+    const posicionesElegidas = Phaser.Utils.Array.Shuffle(posicionesBarrerasY).slice(0, cantidadElegida);
     
-      // Crea las barreras en las posiciones elegidas
-      this.barreras = [];
-      for (const y of posicionesElegidas) {
-        const barrera = this.physics.add.sprite(centerX, y, "Barrera").setImmovable(true).setDepth(3);
-        this.barreras.push(barrera);
-      }
+    // Crea las barreras en las posiciones elegidas
+    this.barreras = [];
+    for (const y of posicionesElegidas) {
+      const barrera = this.physics.add.sprite(centerX, y, "Barrera").setImmovable(true).setDepth(3);
+      this.barreras.push(barrera);
+    }
     
-      // ---------- JUGADORES ----------
+    // ---------- JUGADORES ----------
       
-      this.Celeste = new Jugador(this, centerX - 450, centerY - 255, "Celeste");
-      this.Naranja = new Jugador(this, centerX - 450, centerY + 255, "Naranja");
+    this.Celeste = new Jugador(this, centerX - 450, centerY - 255, "Celeste");
+    this.Naranja = new Jugador(this, centerX - 450, centerY + 255, "Naranja");
     
-      // Grupo de jugadores
-      this.jugadores = this.physics.add.group();
-      this.jugadores.add(this.Celeste);
-      this.jugadores.add(this.Naranja);
-      this.Celeste.setCollideWorldBounds(true);
-      this.Naranja.setCollideWorldBounds(true);
-      this.jugadores.Intangible = false;
-      this.jugadores.Aturdido = false;
-      this.jugadores.ManosOcupadas = false;
-      this.jugadores.setDepth(5);
+    // Grupo de jugadores
+    this.jugadores = this.physics.add.group();
+    this.jugadores.add(this.Celeste);
+    this.jugadores.add(this.Naranja);
+    this.Celeste.setCollideWorldBounds(true);
+    this.Naranja.setCollideWorldBounds(true);
+    this.jugadores.Intangible = false;
+    this.jugadores.Aturdido = false;
+    this.jugadores.ManosOcupadas = false;
+    this.jugadores.setDepth(5);
     
-      // Colisión entre jugadores
-      this.colliderJugadores = this.physics.add.collider(this.Celeste, this.Naranja);
+    // Colisión entre jugadores
+    this.colliderJugadores = this.physics.add.collider(this.Celeste, this.Naranja);
     
-      // Colisión entre jugadores y barreras
-      this.physics.add.collider(this.jugadores, this.barreras);
+    // Colisión entre jugadores y barreras
+    this.physics.add.collider(this.jugadores, this.barreras);
     
-      // Calcular el punto medio entre ambos jugadores
-      const medioX = (this.Celeste.x + this.Naranja.x) / 2;
-      const medioY = (this.Celeste.y + this.Naranja.y) / 2;
+    // Calcular el punto medio entre ambos jugadores
+    const medioX = (this.Celeste.x + this.Naranja.x) / 2;
+    const medioY = (this.Celeste.y + this.Naranja.y) / 2;
     
-      // ---------- VEHICULOS ----------
-      this.autos = this.physics.add.group({ runChildUpdate: true });
-      this.motos = this.physics.add.group({ runChildUpdate: true });
+    // ---------- VEHICULOS ----------
+    this.autos = this.physics.add.group({ runChildUpdate: true });
+    this.motos = this.physics.add.group({ runChildUpdate: true });
     
-      // crear spawners delegando a Vehiculo
-      Vehiculo.createAutoSpawner({
-        scene: this,
-        group: this.autos,
-        centerX,
-        centerY,
-        CalleIZQCenter,
-        CalleDERCenter
-      });
+    // crear spawners delegando a Vehiculo
+    Vehiculo.createAutoSpawner({
+      scene: this,
+      group: this.autos,
+      centerX,
+      centerY,
+      CalleIZQCenter,
+      CalleDERCenter
+    });
     
-      Vehiculo.createMotoSpawner({
-        scene: this,
-        group: this.motos,
-        centerY,
-        CalleIZQCenter,
-        CalleDERCenter
-      });
+    Vehiculo.createMotoSpawner({
+      scene: this,
+      group: this.motos,
+      centerY,
+      CalleIZQCenter,
+      CalleDERCenter
+    });
     
-      // Funcion para obtener un color aleatorio
-      const randomColor = () => {
-        const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
-        return colors[Math.floor(Math.random() * colors.length)];
-      }
+    // Funcion para obtener un color aleatorio
+    const randomColor = () => {
+      const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
     
     
     // ---------- SONIDO DE FONDO ----------
@@ -180,7 +192,7 @@ export default class GameVersus extends Phaser.Scene {
       this.ConstruccionNaranja = new Material(this, centerX - 650, centerY + 250, "Construccion").setDepth(0).setScale(0.5);
       this.Grava = new Material(this, centerX + 700, centerY + 300, "Grava").setScale(0.5);
       this.Ladrillos = new Material(this, centerX + 700, centerY, "Ladrillos").setScale(0.5);
-      this.Mezcladora = new Material(this, centerX - 800, centerY, "Mezcladora").setScale(0.5);
+      this.Mezcladora = new Material(this, centerX - 800, centerY - 50, "Mezcladora").setScale(0.5);
     
       // --- Array con todos los materiales (incluye las dos construcciones si quieres que se actualicen) ---
       this.materiales = [
@@ -228,8 +240,17 @@ export default class GameVersus extends Phaser.Scene {
     
     update() {
     
+      console.log("Versus update");
+
       // --- DETENER TODO EN GAME OVER ---
       if (this.gameOver) {
+
+        // Detener todos los audios una única vez
+      if (!this._audioStoppedOnGameOver) {
+        try { this.sound.stopAll(); } catch (e) { console.warn("stopAll sound failed:", e); }
+        this._audioStoppedOnGameOver = true;
+      }
+      
         // Detener jugadores
         this.Celeste.setVelocity(0, 0);
         this.Naranja.setVelocity(0, 0);
@@ -247,6 +268,7 @@ export default class GameVersus extends Phaser.Scene {
       this.physics.world.colliders.getActive().forEach(collider => {
         collider.active = false;
       });
+      
     
         return; // No ejecutar más lógica de update
       }
@@ -294,8 +316,8 @@ export default class GameVersus extends Phaser.Scene {
       this.Naranja.interactuarLadrillo(this.kKey);
     
       // ---------- INTERACCION CON LA CONSTRUCCION ----------
-      this.Celeste.interactuarConstruccion(this.fKey);
-      this.Naranja.interactuarConstruccion(this.kKey);
+      this.Celeste.interactuarConstruccion(this.fKey, this.ConstruccionCeleste);
+      this.Naranja.interactuarConstruccion(this.kKey, this.ConstruccionNaranja);
     
     
     // --- NUEVO BLOQUE PARA VACIAR BALDE MANTENIENDO BOTON 2 ---
@@ -335,7 +357,11 @@ export default class GameVersus extends Phaser.Scene {
     // ---------- ACTUALIZACIONES ----------
     
     // Si cualquiera de las dos construcciones cambió su textura (ej: ya no es "Construccion"), actualizar pasto
-    if (this.ConstruccionCeleste.texture.key !== "Construccion" || this.ConstruccionNaranja.texture.key !== "Construccion") {
+    if (this.ConstruccionCeleste.texture.key !== "Construccion" && this.ConstruccionNaranja.texture.key == "Construccion") {
+      this.pasto.setTexture("PastoNaranja");
+    } else if (this.ConstruccionNaranja.texture.key !== "Construccion" && this.ConstruccionCeleste.texture.key == "Construccion") {
+      this.pasto.setTexture("PastoCeleste");
+    } else if (this.ConstruccionCeleste.texture.key !== "Construccion" && this.ConstruccionNaranja.texture.key !== "Construccion") {
       this.pasto.setTexture("Pasto2");
     }
     
