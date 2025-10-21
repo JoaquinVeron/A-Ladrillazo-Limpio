@@ -39,7 +39,7 @@ export default class Ajustes extends Phaser.Scene {
     const boxY = textoTeclas.y;
 
     const box = this.add.rectangle(boxX, boxY, 120, 56, 0x222222, 0.85).setStrokeStyle(4, 0xffffff).setDepth(1).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
-    const boxText = this.add.text(boxX, boxY - 10, showButtons ? 'SI' : 'NO', {
+    const boxText = this.add.text(boxX, boxY - 7, showButtons ? 'SI' : 'NO', {
       fontFamily: 'ActionComicsBlack',
       fontSize: '28px',
       fill: showButtons ? '#00ff00' : '#ff0000ff'
