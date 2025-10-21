@@ -21,6 +21,16 @@ export default class GameVersus extends Phaser.Scene {
       } catch (e) { console.warn("No pudo reactivar physics.world:", e); }
     }
 
+    // tiempos por jugador (mismo valor que cooperativo)
+    this.tiempoCeleste = 180;
+    this.tiempoNaranja = 180;
+    // Si había tiempo pendiente (antes de que create() se llamara), aplicarlo
+    if (typeof this._pendingAddTiempo === "number" && this._pendingAddTiempo > 0) {
+      this.tiempoCeleste += this._pendingAddTiempo;
+      this.tiempoNaranja += this._pendingAddTiempo;
+      delete this._pendingAddTiempo;
+    }
+
     // lanzar HUD pasando la key de esta escena
     this.scene.launch('HUD', { sceneKey: this.scene.key });
 
@@ -227,19 +237,45 @@ export default class GameVersus extends Phaser.Scene {
     return veh;
     }
     
-    sumarTiempo(segundos) {
-      // Delegar al HUD si está disponible
-      const hud = this.scene.get('HUD');
-      if (hud && typeof hud.sumarTiempo === 'function') {
-        hud.sumarTiempo(segundos);
+    sumarTiempo(segundos, jugador) {
+      // jugador: "Celeste" | "Naranja" | undefined
+      if (typeof segundos !== "number") return;
+
+      if (jugador === "Celeste") {
+        if (typeof this.tiempoCeleste === "number") {
+          this.tiempoCeleste += segundos;
+        } else {
+          this._pendingAddTiempo = (this._pendingAddTiempo || 0) + segundos;
+        }
+        return;
+      }
+
+      if (jugador === "Naranja") {
+        if (typeof this.tiempoNaranja === "number") {
+          this.tiempoNaranja += segundos;
+        } else {
+          this._pendingAddTiempo = (this._pendingAddTiempo || 0) + segundos;
+        }
+        return;
+      }
+
+      // Comportamiento por defecto: sumar a ambos (compatibilidad)
+      if (typeof this.tiempoCeleste === "number" && typeof this.tiempoNaranja === "number") {
+        this.tiempoCeleste += segundos;
+        this.tiempoNaranja += segundos;
       } else {
-        // si HUD aún no está listo, almacenar pendiente para que HUD lo consuma en create()
         this._pendingAddTiempo = (this._pendingAddTiempo || 0) + segundos;
       }
+
+      // Actualizar HUD si es necesario (no obligatorio)
+      const hud = this.scene.get('HUD');
+      if (hud && typeof hud.sumarTiempo === 'function') {
+        try { hud.sumarTiempo(segundos); } catch (e) {}
+      }
     }
-    
+
     update() {
-    
+
       console.log("Versus update");
 
       // --- DETENER TODO EN GAME OVER ---
@@ -271,6 +307,32 @@ export default class GameVersus extends Phaser.Scene {
       
     
         return; // No ejecutar más lógica de update
+      }
+    
+      // --- DECREMENTAR TIMERS POR JUGADOR ---
+      const deltaSec = this.game.loop.delta / 1000;
+      // Solo decrementar si no estamos en gameOver
+      if (!this.gameOver) {
+        if (typeof this.tiempoCeleste === "number") this.tiempoCeleste = Math.max(0, this.tiempoCeleste - deltaSec);
+        if (typeof this.tiempoNaranja === "number") this.tiempoNaranja = Math.max(0, this.tiempoNaranja - deltaSec);
+      }
+    
+      // Si alguno se quedó sin tiempo -> el otro gana
+      if (!this.gameOver) {
+        if (this.tiempoCeleste <= 0 && this.tiempoNaranja > 0) {
+          this.winner = "Naranja";
+          this.winCondition = true;
+          this.gameOver = true;
+        } else if (this.tiempoNaranja <= 0 && this.tiempoCeleste > 0) {
+          this.winner = "Celeste";
+          this.winCondition = true;
+          this.gameOver = true;
+        } else if (this.tiempoCeleste <= 0 && this.tiempoNaranja <= 0) {
+          // Si ambos se acaban exactamente, empate -> declarar empate (puedes ajustar)
+          this.winner = "EMPATE";
+          this.winCondition = true;
+          this.gameOver = true;
+        }
       }
     
       // TECLAS CELESTE

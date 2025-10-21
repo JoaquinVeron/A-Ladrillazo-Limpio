@@ -182,19 +182,43 @@ export default class HUD extends Phaser.Scene {
       { fontFamily: "ActionComicsBlack", fontSize: "20px", color: "#ffffffff", stroke: "#000000ff", strokeThickness: 4 }
     ).setOrigin(0.5, 0).setDepth(6);
 
-    this.tiempoRestante = 180;
-    if (gs && typeof gs._pendingAddTiempo === 'number') {
-      this.tiempoRestante += gs._pendingAddTiempo;
-      delete gs._pendingAddTiempo;
-    }
+    // timer / reloj (reemplazar single timer por per-player en Versus)
+    if (!this.isVersus) {
+      this.relojIcono = this.add.image(this.centerX - 875, this.centerY - 455, "Reloj").setScale(1).setDepth(6);
+      this.textoTimer = this.add.text(
+        this.relojIcono.x + 160,
+        this.relojIcono.y - 10,
+        "04:00",
+        { fontFamily: "ActionComicsBlack", fontSize: "40px", color: "#ffffffff", stroke: "#000000", strokeThickness: 6 }
+      ).setOrigin(0.5).setDepth(6);
+      this.tiempoRestante = 180;
+      if (gs && typeof gs._pendingAddTiempo === 'number') {
+        this.tiempoRestante += gs._pendingAddTiempo;
+        delete gs._pendingAddTiempo;
+      }
+    } else {
+      // Versus: crear dos timers visibles (Celeste arriba/izquierda, Naranja arriba/derecha)
+      this.textoTimerCeleste = this.add.text(
+        this.centerX - 800,
+        this.centerY - 455,
+        "03:00",
+        { fontFamily: "ActionComicsBlack", fontSize: "36px", color: "#00bfff", stroke: "#000000", strokeThickness: 6 }
+      ).setOrigin(0.5).setDepth(6);
 
-    this.relojIcono = this.add.image(this.centerX - 875, this.centerY - 455, "Reloj").setScale(1).setDepth(6);
-    this.textoTimer = this.add.text(
-      this.relojIcono.x + 160,
-      this.relojIcono.y - 10,
-      "04:00",
-      { fontFamily: "ActionComicsBlack", fontSize: "40px", color: "#ffffffff", stroke: "#000000", strokeThickness: 6 }
-    ).setOrigin(0.5).setDepth(6);
+      this.textoTimerNaranja = this.add.text(
+        this.centerX + 800,
+        this.centerY - 455,
+        "03:00",
+        { fontFamily: "ActionComicsBlack", fontSize: "36px", color: "#ff8c00", stroke: "#000000", strokeThickness: 6 }
+      ).setOrigin(0.5).setDepth(6);
+
+      // Si la escena tiene tiempo pendiente, aplicarlo
+      if (gs && typeof gs._pendingAddTiempo === 'number') {
+        gs.tiempoCeleste = (gs.tiempoCeleste || 180) + gs._pendingAddTiempo;
+        gs.tiempoNaranja = (gs.tiempoNaranja || 180) + gs._pendingAddTiempo;
+        delete gs._pendingAddTiempo;
+      }
+    }
 
     this._gameOverLocal = false;
     this._winLocal = false;
@@ -417,14 +441,31 @@ export default class HUD extends Phaser.Scene {
     }
 
     // timer
-    if (!gs.gameOver) {
-      this.tiempoRestante -= this.game.loop.delta / 1000;
-      if (this.tiempoRestante < 0) this.tiempoRestante = 0;
-      const minutos = Math.floor(this.tiempoRestante / 60);
-      const segundos = Math.floor(this.tiempoRestante % 60);
-      const textoFormateado = `${minutos.toString().padStart(2, "0")}:${segundos.toString().padStart(2, "0")}`;
-      safeSetText(this.textoTimer, textoFormateado);
-      safeSetColor(this.textoTimer, this.tiempoRestante <= 10 ? "#ff0000" : "#ffffffff");
+    if (!this.isVersus) {
+      if (!gs.gameOver) {
+        this.tiempoRestante -= this.game.loop.delta / 1000;
+        if (this.tiempoRestante < 0) this.tiempoRestante = 0;
+        const minutos = Math.floor(this.tiempoRestante / 60);
+        const segundos = Math.floor(this.tiempoRestante % 60);
+        const textoFormateado = `${minutos.toString().padStart(2, "0")}:${segundos.toString().padStart(2, "0")}`;
+        safeSetText(this.textoTimer, textoFormateado);
+        safeSetColor(this.textoTimer, this.tiempoRestante <= 10 ? "#ff0000" : "#ffffffff");
+      }
+    } else {
+      // Versus: mostrar tiempos por jugador desde la escena
+      const tC = (gs && typeof gs.tiempoCeleste === 'number') ? Math.max(0, Math.floor(gs.tiempoCeleste)) : 180;
+      const tN = (gs && typeof gs.tiempoNaranja === 'number') ? Math.max(0, Math.floor(gs.tiempoNaranja)) : 180;
+
+      const format = (t) => {
+        const m = Math.floor(t / 60);
+        const s = t % 60;
+        return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+      };
+
+      safeSetText(this.textoTimerCeleste, format(tC));
+      safeSetText(this.textoTimerNaranja, format(tN));
+      safeSetColor(this.textoTimerCeleste, tC <= 10 ? "#ff0000" : "#00bfff");
+      safeSetColor(this.textoTimerNaranja, tN <= 10 ? "#ff0000" : "#ff8c00");
     }
 
     if (this.tiempoRestante <= 0 && !this._gameOverLocal) {
@@ -450,9 +491,9 @@ export default class HUD extends Phaser.Scene {
       // Determinar texto y color según ganador (si existe)
       const winner = gs.winner || null;
       let titulo = "VICTORIA";
-      let color = "#00ff00";
+      let color = "#c5d300ff";
       if (winner) {
-        titulo = `VICTORIA - ${winner.toUpperCase()}`;
+        titulo = `${winner.toUpperCase()}`;
         if (winner === "Celeste") color = "#00bfff"; // azul claro
         else if (winner === "Naranja") color = "#ff8c00"; // naranja
       }

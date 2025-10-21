@@ -351,7 +351,23 @@ etapa1Construccion() {
     this.scene.sound.play("SonidoConstruccion", {volume: 0.75, rate: 2});
     console.log(" ¡Primera Construcción completada!");
     // --- SUMAR 3 MINUTOS ---
-    if (this.scene.sumarTiempo) this.scene.sumarTiempo(90);
+    // En Versus, sumar solo al jugador que corresponde a esta construcción
+    try {
+      const isVersus = this.scene && this.scene.scene && this.scene.scene.key === "gameversus";
+      if (isVersus) {
+        if (this.scene.ConstruccionCeleste === this) {
+          if (this.scene.sumarTiempo) this.scene.sumarTiempo(180, "Celeste");
+        } else if (this.scene.ConstruccionNaranja === this) {
+          if (this.scene.sumarTiempo) this.scene.sumarTiempo(180, "Naranja");
+        } else {
+          if (this.scene.sumarTiempo) this.scene.sumarTiempo(90); // fallback
+        }
+      } else {
+        if (this.scene.sumarTiempo) this.scene.sumarTiempo(90);
+      }
+    } catch (e) {
+      if (this.scene.sumarTiempo) this.scene.sumarTiempo(90);
+    }
   });
 }
 
@@ -365,8 +381,18 @@ etapa2Construccion() {
     this.setTexture("Construccion3Versus");
     this.scene.sound.play("SonidoConstruccion", { volume: 0.75, rate: 2 });
     console.log(" ¡Primera Construcción (Versus) completada! (sin hitboxes ni paredes)");
-    // --- SUMAR 5 MINUTOS ---
-    if (this.scene.sumarTiempo) this.scene.sumarTiempo(120);
+    // --- SUMAR 5 MINUTOS SOLO AL JUGADOR PROPIETARIO ---
+    try {
+      if (this.scene.ConstruccionCeleste === this) {
+        if (this.scene.sumarTiempo) this.scene.sumarTiempo(240, "Celeste");
+      } else if (this.scene.ConstruccionNaranja === this) {
+        if (this.scene.sumarTiempo) this.scene.sumarTiempo(240, "Naranja");
+      } else {
+        if (this.scene.sumarTiempo) this.scene.sumarTiempo(120);
+      }
+    } catch (e) {
+      if (this.scene.sumarTiempo) this.scene.sumarTiempo(120);
+    }
     return;
   }
 
@@ -553,7 +579,7 @@ verificarConstruccion() {
     }
 
     if (this.texture.key === "Construccion") {
-      this.etapa3Construccion();
+      this.etapa1Construccion();
     } else if (this.texture.key === "Construccion2") {
       this.etapa2Construccion();
     } else if (this.texture.key === "Construccion3") {
