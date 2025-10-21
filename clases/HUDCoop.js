@@ -76,8 +76,39 @@ export default class HUD extends Phaser.Scene {
     // detectar modo versus (dos construcciones) o modo normal (una)
     this.isVersus = !!(gs?.ConstruccionCeleste && gs?.ConstruccionNaranja);
 
+    // --- Leer preferencia para mostrar botones (registry > localStorage > default true) ---
+    const prefKey = 'showHUDButtons';
+    let show = this.registry.get(prefKey);
+    if (typeof show === 'undefined') {
+      const saved = localStorage.getItem(prefKey);
+      show = saved === null ? true : saved === 'true';
+      this.registry.set(prefKey, show);
+    }
+    this._showHUDButtons = !!show;
+
+    // Exponer método para togglear visibilidad desde otras escenas
+    this.setButtonsVisible = (visible) => {
+      this._showHUDButtons = !!visible;
+      // ajustar visibilidad de todos los sprites que son botones de tecla
+      const btns = [
+        this.BotonBaldeE, this.BotonLadrillosE, this.BotonLadrillosF, this.BotonArenaF,
+        this.BotonGravaF, this.BotonMezcladoraF, this.BotonCementoF,
+        this.BotonBaldeJ, this.BotonLadrillosJ, this.BotonLadrillosK, this.BotonArenaK,
+        this.BotonGravaK, this.BotonMezcladoraK, this.BotonCementoK
+      ];
+      btns.forEach(b => { if (b && b.setVisible) b.setVisible(this._showHUDButtons); });
+    };
+
+    // Escuchar evento global como respaldo
+    this.game.events.on('hud:toggle-buttons', (v) => {
+      try { this.setButtonsVisible(!!v); } catch (e) {}
+    });
+
+    // Aplicar estado inicial
+    this.setButtonsVisible(this._showHUDButtons);
+
+    // UI Construcción Celeste
     if (this.isVersus) {
-      // UI Construcción Celeste
       this.iconoCementoCeleste = this.add.image(
         gs.ConstruccionCeleste.x - 80,
         gs.ConstruccionCeleste.y,
@@ -277,6 +308,7 @@ export default class HUD extends Phaser.Scene {
         this.BotonLadrillosF.setPosition(gs.Ladrillos?.x ?? this.BotonLadrillosF.x, (gs.Ladrillos?.y ?? this.BotonLadrillosF.y) - 150);
       }
     }
+    
 
     // Jugador Naranja
     if (this.BotonArenaK) {

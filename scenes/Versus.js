@@ -69,7 +69,7 @@ export default class GameVersus extends Phaser.Scene {
       .setDepth(1);
     
     // Pasto detalle
-    this.add.image(centerX, centerY, "PastoDetalle")
+    this.add.image(centerX, centerY, "PastoDetalleVersus")
       .setOrigin(0.5)
       .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
       .setAlpha(1)
@@ -202,7 +202,7 @@ export default class GameVersus extends Phaser.Scene {
       this.ConstruccionNaranja = new Material(this, centerX - 650, centerY + 250, "Construccion").setDepth(0).setScale(0.5);
       this.Grava = new Material(this, centerX + 700, centerY + 300, "Grava").setScale(0.5);
       this.Ladrillos = new Material(this, centerX + 700, centerY, "Ladrillos").setScale(0.5);
-      this.Mezcladora = new Material(this, centerX - 800, centerY - 50, "Mezcladora").setScale(0.5);
+      this.Mezcladora = new Material(this, centerX - 800, centerY - 75, "Mezcladora").setScale(0.5);
     
       // --- Array con todos los materiales (incluye las dos construcciones si quieres que se actualicen) ---
       this.materiales = [

@@ -38,6 +38,7 @@ export default class Preload extends Phaser.Scene {
     this.load.image("Cemento", "Cemento.png");
     this.load.image("Circulo", "Circulo.png");
     this.load.image("Coca", "Coca.png");
+    this.load.image("Controles", "Controles.png");
     this.load.image("Construccion", "construccion.png");
     this.load.image("Construccion2", "construccion2.png");
     this.load.image("Construccion3", "construccion3.png");
@@ -67,6 +68,7 @@ export default class Preload extends Phaser.Scene {
     this.load.image("PastoNaranja", "PastoNaranja.png");
     this.load.image("Pasto2", "Pasto2.png");
     this.load.image("PastoDetalle", "Pastodetalle.png");
+    this.load.image("PastoDetalleVersus", "PastodetalleVersus.png");
     this.load.image("Reloj", "Reloj.png");
     this.load.image("Sombreado", "Sombreado.png");
 
@@ -210,11 +212,22 @@ this.tweens.add({
     }).setOrigin(0.5).setAlpha(0).setInteractive();
 
     pvpButton.on('pointerdown', () => {
-      this.scene.start("gameversus");
+      //Pantalla negra cae de arriba
+      this.tweens.add({
+        targets: this.PantallaNegra,
+        y: 0,
+        duration: 1000,
+        ease: 'Power2',
+        onComplete: () => {
+          this.time.delayedCall(500, () => {
+            this.scene.start("gameversus");
+          });
+        }
+      });
     });
 
     // Crear boton para ajustes
-    const settingsButton = this.add.text(centerX + 400, centerY + 150, 'AJUSTES', {
+    const settingsButton = this.add.text(centerX + 400, centerY + 150, 'CONTROLES', {
       fontFamily: 'ActionComicsBlack',
       fontSize: '40px',
       fill: '#fff',
@@ -225,7 +238,18 @@ this.tweens.add({
     }).setOrigin(0.5).setAlpha(0).setInteractive();
 
     settingsButton.on('pointerdown', () => {
-      this.scene.start("Ajustes");
+      //Pantalla negra cae de arriba
+      this.tweens.add({
+        targets: this.PantallaNegra,
+        y: 0,
+        duration: 1000,
+        ease: 'Power2',
+        onComplete: () => {
+          this.time.delayedCall(500, () => {
+            this.scene.start("Ajustes");
+          });
+        }
+      });
     });
 
     // Aparecer botones con tweens
