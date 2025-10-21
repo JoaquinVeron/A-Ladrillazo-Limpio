@@ -8,7 +8,7 @@ export default class Preload extends Phaser.Scene {
   preload() {
 
     // Ruta base absoluta
-    this.load.setPath('./public/assets');
+    this.load.setPath('../assets');
     
     // Imagenes
     this.load.image("A", "A.png");
