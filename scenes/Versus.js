@@ -1,4 +1,5 @@
-import Jugador from "../clases/Jugador.js";
+import JugadorCeleste from "../clases/JugadorCeleste.js";
+import JugadorNaranja from "../clases/JugadorNaranja.js";
 import Vehiculo from "../clases/Vehiculo.js";
 import Material from "../clases/Material.js";
 
@@ -112,8 +113,8 @@ export default class GameVersus extends Phaser.Scene {
     
     // ---------- JUGADORES ----------
       
-    this.Celeste = new Jugador(this, centerX - 450, centerY - 255, "Celeste");
-    this.Naranja = new Jugador(this, centerX - 450, centerY + 255, "Naranja");
+    this.Celeste = new JugadorCeleste(this, centerX - 450, centerY - 255, "Celeste");
+    this.Naranja = new JugadorNaranja(this, centerX - 450, centerY + 255, "Naranja");
     
     // Grupo de jugadores
     this.jugadores = this.physics.add.group();

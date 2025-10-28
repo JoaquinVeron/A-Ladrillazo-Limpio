@@ -520,6 +520,21 @@ export default class HUD extends Phaser.Scene {
       gs.winCondition = false;
       if (gs) gs.gameOver = true;
 
+      // Eliminar/ocultar UI de construcción (textos e iconos) para evitar que queden en pantalla
+      try {
+        // modo versus
+        if (this.isVersus) {
+          [this.iconoCementoCeleste, this.textoCementoCeleste, this.iconoLadrilloCeleste, this.textoLadrilloCeleste,
+           this.iconoCementoNaranja, this.textoCementoNaranja, this.iconoLadrilloNaranja, this.textoLadrilloNaranja
+          ].forEach(e => { if (e && e.destroy) { e.destroy(); } });
+        } else {
+          // modo normal
+          [this.iconoCemento, this.textoCemento, this.iconoLadrillo, this.textoLadrillo].forEach(e => { if (e && e.destroy) { e.destroy(); } });
+        }
+      } catch (e) {
+        // silencioso en caso de error
+      }
+
       // Determinar texto y color según ganador (si existe)
       const winner = gs.winner || null;
       let titulo = "VICTORIA";

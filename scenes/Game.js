@@ -1,4 +1,5 @@
-import Jugador from "../clases/Jugador.js";
+import JugadorCeleste from "../clases/JugadorCeleste.js";
+import JugadorNaranja from "../clases/JugadorNaranja.js";
 import Vehiculo from "../clases/Vehiculo.js";
 import Material from "../clases/Material.js";
 
@@ -93,8 +94,8 @@ create() {
 
   // ---------- JUGADORES ----------
   
-  this.Celeste = new Jugador(this, centerX - 675, centerY + 325, "Celeste");
-  this.Naranja = new Jugador(this, centerX - 500, centerY + 325, "Naranja");
+  this.Celeste = new JugadorCeleste(this, centerX - 675, centerY + 325, "Celeste");
+  this.Naranja = new JugadorNaranja(this, centerX - 500, centerY + 325, "Naranja");
 
   // Grupo de jugadores
   this.jugadores = this.physics.add.group();
@@ -138,13 +139,6 @@ create() {
     CalleIZQCenter,
     CalleDERCenter
   });
-
-  // Funcion para obtener un color aleatorio
-  const randomColor = () => {
-    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
-    return colors[Math.floor(Math.random() * colors.length)];
-  }
-
 
 // ---------- SONIDO DE FONDO ----------
 // Array de sonidos
@@ -355,28 +349,6 @@ if (this.Construccion.texture.key !== "Construccion") {
   [this.Celeste, this.Naranja].forEach(jugador => {
   if (jugador.ladrillos && jugador.ladrillos.length > 0) {
     jugador.ladrillos.forEach(ladrillo => ladrillo.update());
-  }
-});
-
-// Si el jugador toca la construccion y tiene la textura en "Construccion", ajustar tamaño de jugador, si no volver a la normalidad
-[this.Celeste, this.Naranja].forEach(jugador => {
-  // Inicializa la propiedad si no existe
-  if (typeof jugador.estabaEnConstruccion === "undefined") {
-    jugador.estabaEnConstruccion = false;
-  }
-
-  const enConstruccion = this.physics.overlap(jugador, this.Construccion) && this.Construccion.texture.key === "Construccion";
-  const targetScale = enConstruccion ? 0.28 : 0.3;
-
-  // Solo crear el tween si el estado cambió
-  if (jugador.estabaEnConstruccion !== enConstruccion) {
-    this.tweens.add({
-      targets: jugador,
-      scale: targetScale,
-      duration: 400,
-      ease: 'Sine.easeInOut'
-    });
-    jugador.estabaEnConstruccion = enConstruccion;
   }
 });
 

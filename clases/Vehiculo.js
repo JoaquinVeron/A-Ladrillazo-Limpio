@@ -56,6 +56,35 @@ preUpdate(time, delta) {
 handleCollision(jugador) {
   if (!jugador.Intangible && !jugador.Aturdido) {
 
+    // Detener cualquier balanceo activo (tween o time event) y resetear ángulo
+    if (jugador._balanceTween) {
+      try { jugador._balanceTween.stop(); } catch(e) {}
+      try { jugador._balanceTween.remove(); } catch(e) {}
+      jugador._balanceTween = null;
+    }
+    if (jugador._balanceEvent) {
+      try { jugador._balanceEvent.remove(false); } catch(e) {}
+      jugador._balanceEvent = null;
+    }
+    jugador.angle = 0;
+
+    // Guardar textura previa para restaurarla después
+    jugador._prevTextureKey = jugador.texture ? jugador.texture.key : null;
+
+    // Mostrar textura de choque según el jugador (Celeste / Naranja)
+    let choqueTexture = null;
+    if (jugador._prevTextureKey === "Celeste" || jugador._prevTextureKey === "CorrerCeleste" || jugador._prevTextureKey === "CelesteChoque") {
+      choqueTexture = "CelesteChoque";
+    } else if (jugador._prevTextureKey === "Naranja" || jugador._prevTextureKey === "CorrerNaranja" || jugador._prevTextureKey === "NaranjaChoque") {
+      choqueTexture = "NaranjaChoque";
+    }
+    if (choqueTexture) {
+      jugador.setTexture(choqueTexture);
+    }
+
+    // Detener cualquier animación activa mientras está aturdido
+    if (jugador.anims && jugador.anims.isPlaying) jugador.anims.stop();
+
     // --- Si el jugador estaba apuntando, cancelar la mira ---
     if (jugador.aiming) {
       jugador.aiming = false;
@@ -85,7 +114,6 @@ handleCollision(jugador) {
 
       ladrillosAProcesar.forEach((ladrillo, i) => {
         if (!ladrilloRoto && i === idxRomper && Phaser.Math.Between(1, 3) === 1) {
-          // Frases únicas para ladrillo roto
           const frasesRoto = [
             "NOOO!",
             "EL LADRILLO NO!",
@@ -93,7 +121,9 @@ handleCollision(jugador) {
             "VOS PODES CREER?",
             "ME MATO!",
             "NOO, MI LADRILLO!",
-            "UH, ME LA MANDE!"
+            "UH, ME LA MANDE!",
+            "MI LADRILLOOO!",
+            "LO PERDI!"
           ];
 
           if (!this.scene.ultimaFraseRoto) this.scene.ultimaFraseRoto = null;
@@ -104,11 +134,9 @@ handleCollision(jugador) {
 
           this.scene.ultimaFraseRoto = fraseRoto;
 
-          // Delegar texto al UIManager
           if (this.scene.ui && typeof this.scene.ui.showFloatingText === 'function') {
             this.scene.ui.showFloatingText(ladrillo.x, ladrillo.y - 50, fraseRoto);
           } else {
-            // fallback local si UIManager no existe
             const txt = this.scene.add.text(ladrillo.x, ladrillo.y - 50, fraseRoto, {
               fontFamily: 'ActionComicsBlack',
               fontSize: '24px',
@@ -124,7 +152,6 @@ handleCollision(jugador) {
           return;
         }
 
-        // Dispersar el ladrillo normalmente
         ladrillo.portadorLadrillo = null;
         const offsetX = Phaser.Math.Between(-80, 80);
         const offsetY = Phaser.Math.Between(160, 200) * direccion;
@@ -173,7 +200,6 @@ handleCollision(jugador) {
       jugador.llevaLadrillo = false;
     }
 
-    // --- Mostrar mensaje de choque normal SOLO si NO se rompió un ladrillo ---
     if (!ladrilloRoto) {
       const frasesChoque = [
         "UPS!",
@@ -194,11 +220,9 @@ handleCollision(jugador) {
 
       this.scene.ultimaFraseChoque = frase;
 
-      // Delegar al UIManager
       if (this.scene.ui && typeof this.scene.ui.showFloatingText === 'function') {
         this.scene.ui.showFloatingText(jugador.x, jugador.y - 100, frase);
       } else {
-        // fallback local
         const txt = this.scene.add.text(jugador.x, jugador.y - 100, frase, {
           fontFamily: 'ActionComicsBlack',
           fontSize: '24px',
@@ -210,7 +234,6 @@ handleCollision(jugador) {
       }
     }
 
-    // --- El resto del código de parpadeo, timers, etc. VA SIEMPRE ---
     const direccion = this._direction;
     const desplazamientoY = 80 * direccion;
     const destinoY = jugador.y + desplazamientoY;
@@ -233,13 +256,20 @@ handleCollision(jugador) {
     });
 
     jugador.alpha = 0.5;
-    jugador.setTint(0xff0000);
+    jugador.setTint();
 
+    // Cuando termine el aturdimiento, restaurar textura y permitir animaciones de nuevo
     this.scene.time.delayedCall(3000, () => {
       jugador.Aturdido = false;
       jugador.alpha = 0.5;
       jugador.setTint(0xffffff);
       jugador.body.enable = true;
+
+      // Restaurar textura previa (por ejemplo "Celeste" o "Naranja")
+      if (jugador._prevTextureKey) {
+        jugador.setTexture(jugador._prevTextureKey);
+        delete jugador._prevTextureKey;
+      }
     });
 
     this.scene.time.delayedCall(5000, () => {

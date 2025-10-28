@@ -65,17 +65,19 @@ cargarBalde(jugador){
     jugador.ManosOcupadas = true;
     jugador.llevaBalde = true;
     this.portadorBalde = jugador;
+    this.angle = jugador.angle; // <-- sincronizar rotación inicial
     console.log(`${jugador.texture.key} levantó el ${this.texture.key}`);
 }
 
 soltarBalde(jugador) {
-jugador.ManosOcupadas = false;
-jugador.llevaBalde = false; 
-this.portadorBalde = null;
-this.x = jugador.x + 30;
-this.y = jugador.y + 30;
-this.setDepth(4);
-console.log(`${jugador.texture.key} soltó el ${this.texture.key}`);
+  jugador.ManosOcupadas = false;
+  jugador.llevaBalde = false; 
+  this.portadorBalde = null;
+  this.x = jugador.x + 30;
+  this.y = jugador.y + 30;
+  this.setDepth(4);
+  this.angle = 0; // <-- reset rotación al soltar
+  console.log(`${jugador.texture.key} soltó el ${this.texture.key}`);
 }
 
 llenarBalde(jugador, tecla, material) {
@@ -143,6 +145,7 @@ levantarLadrillo(jugador) {
         "Ladrillo"
       ).setScale(0.5).setDepth(0);
       ladrillo.portadorLadrillo = jugador;
+      ladrillo.angle = jugador.angle; // <-- sincronizar rotación inicial
       jugador.ladrillos.push(ladrillo);
     }
 
@@ -166,6 +169,7 @@ soltarLadrillo(jugador) {
     ladrillo.setDepth(4);
     ladrillo.setInteractive();
     ladrillo.body.enable = true;
+    ladrillo.angle = 0; // <-- reset rotación al soltar
     this.scene.physics.add.collider(ladrillo, this.scene.barreras); // <-- NUEVO
 
     // Overlap para recoger
@@ -194,6 +198,7 @@ levantarLadrilloSuelo(jugador, ladrillo) {
   ) {
     ladrillo.portadorLadrillo = jugador;
     jugador.ladrillos.push(ladrillo);
+    ladrillo.angle = jugador.angle; // <-- sincronizar rotación inicial
     jugador.ManosOcupadas = true;
     jugador.llevaLadrillo = true;
     ladrillo.body.enable = false;
@@ -356,9 +361,9 @@ etapa1Construccion() {
       const isVersus = this.scene && this.scene.scene && this.scene.scene.key === "gameversus";
       if (isVersus) {
         if (this.scene.ConstruccionCeleste === this) {
-          if (this.scene.sumarTiempo) this.scene.sumarTiempo(180, "Celeste");
+          if (this.scene.sumarTiempo) this.scene.sumarTiempo(270, "Celeste");
         } else if (this.scene.ConstruccionNaranja === this) {
-          if (this.scene.sumarTiempo) this.scene.sumarTiempo(180, "Naranja");
+          if (this.scene.sumarTiempo) this.scene.sumarTiempo(270, "Naranja");
         } else {
           if (this.scene.sumarTiempo) this.scene.sumarTiempo(90); // fallback
         }
@@ -563,7 +568,7 @@ etapa3Construccion() {
 
 verificarConstruccion() {
   if (this.cementoCount >= this.cementoNecesario && this.ladrilloCount >= this.ladrilloNecesario) {
-    // Si estamos en Versus, marcar el ganador según la construcción que completó
+    // Marcar ganador en Versus si aplica
     try {
       const isVersusScene = this.scene && this.scene.scene && this.scene.scene.key === "gameversus";
       if (isVersusScene) {
@@ -574,24 +579,23 @@ verificarConstruccion() {
         }
       }
     } catch (e) {
-      // no bloquear si algo inesperado ocurre
       console.warn("Verificar ganador: ", e);
     }
 
-    if (this.texture.key === "Construccion") {
+    // Ejecutar la etapa correspondiente — incluir clave Versus también
+    const key = this.texture.key;
+    if (key === "Construccion") {
       this.etapa1Construccion();
-    } else if (this.texture.key === "Construccion2") {
+    } else if (key === "Construccion2") {
       this.etapa2Construccion();
-    } else if (this.texture.key === "Construccion3") {
+    } else if (key === "Construccion3" || key === "Construccion3Versus") {
       this.etapa3Construccion();
       console.log("🏗️ ¡Construcción completa!");
     }
 
-    // Aumenta los requerimientos para la próxima vez (entre 1 y 2)
+    // Aumentar requerimientos y reiniciar contadores
     this.cementoNecesario += Phaser.Math.Between(1, 2);
     this.ladrilloNecesario += Phaser.Math.Between(3, 4);
-
-    // Reinicia los contadores
     this.cementoCount = 0;
     this.ladrilloCount = 0;
 
@@ -606,15 +610,17 @@ update() {
   // Si alguien lo lleva, seguir al portador
   if (this.portadorBalde) {
     this.x = this.portadorBalde.x + 20;
-    this.y = this.portadorBalde.y + 50;
+    this.y = this.portadorBalde.y + 45;
     this.setDepth(this.portadorBalde.depth + 0.1);
+    this.angle = this.portadorBalde.angle; // <-- seguir rotación del jugador
   } else if (this.portadorLadrillo) {
     const idx = this.portadorLadrillo.ladrillos.indexOf(this);
     this.x = this.portadorLadrillo.x;
     this.y = this.portadorLadrillo.y + 25 - (idx * 18);
     this.setDepth(this.portadorLadrillo.depth + 0.1 * (idx + 1));
+    this.angle = this.portadorLadrillo.angle; // <-- seguir rotación del jugador
   }
-
+  
   // --- NUEVO: depth dinámico según posición Y del jugador ---
   // Solo para materiales que no están siendo llevados y NO sean "Construccion" ni "Balde"
   if ((this.texture.key !== "Construccion" && this.texture.key !== "Construccion2" && this.texture.key !== "Construccion3" && this.texture.key !== "Construccion4" && !this.portadorBalde && !this.portadorLadrillo) ) {

@@ -18,7 +18,12 @@ export default class Preload extends Phaser.Scene {
     this.load.image("Celeste1", "1.png");
     this.load.image("Naranja2", "2.png");
     this.load.image("Celeste", "Celeste.png");
+    this.load.image("CelesteEspalda", "CelesteEspalda.png");
+    this.load.image("CelesteChoque", "CelesteChoque.png");
+    this.load.spritesheet("CorrerCeleste", "SpritesheetCeleste.png", { frameWidth: 306, frameHeight: 408 });
     this.load.image("Naranja", "Naranja.png");
+    this.load.image("NaranjaChoque", "NaranjaChoque.png");
+    this.load.spritesheet("CorrerNaranja", "SpritesheetNaranja.png", { frameWidth: 306, frameHeight: 408 });
     this.load.image("Auto", "auto.png");
     this.load.image("Camion", "camion.png");
     this.load.image("Camion2", "camion2.png");
@@ -106,6 +111,46 @@ export default class Preload extends Phaser.Scene {
 // Fondo de pantalla celeste
 this.add.rectangle(centerX, centerY, this.cameras.main.width, this.cameras.main.height, 0x51eede).setDepth(0);
 this.add.image(centerX, centerY, 'Borde').setDepth(2);
+
+// Crear la animación de correr (ajusta start/end y frameRate según tu sheet)
+    if (!this.anims.exists("CorrerCeleste")) {
+      this.anims.create({
+        key: "CorrerCeleste",
+        frames: this.anims.generateFrameNumbers("CorrerCeleste", { start: 0, end: 9 }),
+        frameRate: 11,
+        repeat: -1
+      });
+    }
+
+    // Crear la animación de correr (ajusta start/end y frameRate según tu sheet)
+    if (!this.anims.exists("CaminarCeleste")) {
+      this.anims.create({
+        key: "CaminarCeleste",
+        frames: this.anims.generateFrameNumbers("CorrerCeleste", { start: 0, end: 9 }),
+        frameRate: 8,
+        repeat: -1
+      });
+    }
+
+  // Crear la animación de correr (ajusta start/end y frameRate según tu sheet)
+    if (!this.anims.exists("CorrerNaranja")) {
+      this.anims.create({
+        key: "CorrerNaranja",
+        frames: this.anims.generateFrameNumbers("CorrerNaranja", { start: 0, end: 9 }),
+        frameRate: 11,
+        repeat: -1
+      });
+    }
+
+    // Crear la animación de correr (ajusta start/end y frameRate según tu sheet)
+    if (!this.anims.exists("CaminarNaranja")) {
+      this.anims.create({
+        key: "CaminarNaranja",
+        frames: this.anims.generateFrameNumbers("CorrerNaranja", { start: 0, end: 9 }),
+        frameRate: 7,
+        repeat: -1
+      });
+    }
 
 this.PantallaNegra = this.add.image(0, - 1080, 'Madera').setOrigin(0, 0).setDepth(1);
 
@@ -262,4 +307,3 @@ this.tweens.add({
     });
   };
   }
-  
