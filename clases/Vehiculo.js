@@ -390,7 +390,7 @@ static createMotoSpawner({
       });
 
       if (Phaser.Math.Between(1, 5) === 1) {
-        scene.sound.play("RuidoMoto", { volume: 1 });
+        scene.sound.play("RuidoMoto", { volume: 0.8 });
       }
     }
   });

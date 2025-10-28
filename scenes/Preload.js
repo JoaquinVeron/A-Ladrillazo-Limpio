@@ -89,7 +89,7 @@ export default class Preload extends Phaser.Scene {
     this.load.audio("SonidoCarretera", "SonidoCarretera.mp3");
     this.load.audio("SonidoCarretera2", "SonidoCarretera2.mp3");
     this.load.audio("SonidoConstruccion", "sonidoConstruccion.mp3");
-    this.load.audio("RuidoMoto", "mentiraColgala.mp3");
+    this.load.audio("RuidoMoto", "BocinaMoto.mp3");
 
     // Videos
     this.load.video("Intro", "TelevisaPresenta.mp4");
