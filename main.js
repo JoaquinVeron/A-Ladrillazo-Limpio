@@ -3,7 +3,6 @@ import Game from "/scenes/Game.js";
 import HUD from "/clases/HUDCoop.js";
 import GameVersus from "./scenes/Versus.js";
 import Ajustes from "./scenes/Ajustes.js";
-import Phaser from "phaser";
 
 
 const config = {

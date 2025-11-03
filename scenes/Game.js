@@ -2,7 +2,6 @@ import JugadorCeleste from "../clases/JugadorCeleste.js";
 import JugadorNaranja from "../clases/JugadorNaranja.js";
 import Vehiculo from "../clases/Vehiculo.js";
 import Material from "../clases/Material.js";
-import Phaser from "phaser";
 
 export default class Game extends Phaser.Scene {
 constructor() {
